@@ -5,78 +5,110 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 	"math/rand"
 	"os"
+    "time"
 )
 
-var winTitle string = "Go-SDL2 Render"
-var winWidth, winHeight int32 = 800, 600
+type Context struct {
+    WindowTitle string
+    WinWidth int32
+    WinHeight int32
+	Window *sdl.Window
+	Renderer *sdl.Renderer
+    Blocks int64
+    ScrnWidth int64
+    ScrnHeight int64
+       }
 
-func run() int {
-	var window *sdl.Window
-	var renderer *sdl.Renderer
-	// 	var points []sdl.Point
-	// 	var rect sdl.Rect
-	// 	var rects []sdl.Rect
 
-	window, err := sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		winWidth, winHeight, sdl.WINDOW_SHOWN)
+var CTX Context 
+
+func New(b,sw,sh int, title string) *Context {
+    fmt.Println("starting Game engine")
+    CTX = Context{
+        Blocks: int64(b),
+        ScrnWidth: int64(sw),
+        ScrnHeight: int64(sh),
+        WinWidth: int32(sw*b),
+        WinHeight: int32(sh*b),
+        WindowTitle: title,
+    };
+    var err error
+    CTX.Window, err = sdl.CreateWindow(CTX.WindowTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+		CTX.WinWidth, CTX.WinHeight, sdl.WINDOW_SHOWN)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create window: %s\n", err)
-		return 1
+		os.Exit( 1)
 	}
-	defer window.Destroy()
 
-	renderer, err = sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	CTX.Renderer, err = sdl.CreateRenderer(CTX.Window, -1, sdl.RENDERER_ACCELERATED)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create renderer: %s\n", err)
-		return 2
+		os.Exit( 2)
 	}
-	defer renderer.Destroy()
 
-	var dx, dy, x, y int32
-	var w, h int32
+    return &CTX
+}
+
+func (c *Context) Destroy() {
+	c.Window.Destroy()
+	c.Renderer.Destroy()
+    
+}
+
+func Delay(s uint32) {
+    sdl.Delay(s)
+}
+
+// rand intn for sdl
+func RandIntN(i int) int32 {
+    return int32(rand.Intn(i))
+}
+
+var dx, dy, x, y int32
+var w, h int32
+var blocks,blocksw,blocksh int
+
+func (c *Context) onCreate() {
+    fmt.Println("created")
 	w = 100
 	h = 100
 
 	dx = 1
 	dy = 1
 
-	blocks := 2
-	blocksw := int(winWidth) / blocks
-	blocksh := int(winHeight) / blocks
+	blocks = int(c.Blocks)
+	blocksw = int(c.ScrnWidth)
+	blocksh = int(c.ScrnHeight)    
+}
 
-	running := true
+func (c *Context) onUpdate(elapsed int64) (running bool) {
 	var oldLx, oldLy, nx, ny int32
-	for running {
+	running = true
 
-		//         for i:=0;i<1000;i++ {
-		//
-		//         renderer.SetDrawColor(r256(),r256(),r256(),255)
-		//         renderer.FillRect(&sdl.Rect{int32(rand.Intn(blocksw)*blocks),int32(rand.Intn(blocksh)*blocks),int32(blocks),int32(blocks)})
-		//         }
 
 		x += dx
 		y += dy
-		x = wrap(x, 0, winWidth)
-		y = wrap(y, 0, winHeight)
+		x = wrap(x, 0, c.WinWidth)
+		y = wrap(y, 0, c.WinHeight)
 
-		renderer.SetDrawColor(255, 127, 127, 255)
-		renderer.FillRect(&sdl.Rect{x, y, w, h})
-		renderer.SetDrawColor(0, 0, 0, 255)
-		renderer.DrawRect(&sdl.Rect{x, y, w, h})
+		c.Renderer.SetDrawColor(255, 127, 127, 255)
+		c.Renderer.FillRect(&sdl.Rect{x, y, w, h})
+		c.Renderer.SetDrawColor(0, 0, 0, 255)
+		c.Renderer.DrawRect(&sdl.Rect{x, y, w, h})
 
-		renderer.SetDrawColor(r256(), r256(), r256(), 255)
-		nx = int32(rand.Intn(blocksw))
-		ny = int32(rand.Intn(blocksh))
-		Line(oldLx, oldLy, nx, ny, int32(blocks), renderer)
+		c.Renderer.SetDrawColor(r256(), r256(), r256(), 255)
+		nx = RandIntN(blocksw)
+		ny = RandIntN(blocksh)
+		Line(oldLx, oldLy, nx, ny, int32(blocks), c.Renderer)
 		oldLx = nx
 		oldLy = ny
 
-		renderer.SetDrawColor(r256(), r256(), r256(), 255)
-		Triangle(int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(blocks), renderer)
+		c.Renderer.SetDrawColor(r256(), r256(), r256(), 255)
+		Triangle(RandIntN(blocksw), RandIntN(blocksh), RandIntN(blocksw), RandIntN(blocksh), RandIntN(blocksw), RandIntN(blocksh), int32(blocks), c.Renderer)
 
-		renderer.Present()
+		c.Renderer.Present()
 
-		sdl.Delay(1)
+		Delay(1)
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
@@ -85,7 +117,12 @@ func run() int {
 				break
 			}
 		}
-	}
+
+    return running
+}
+
+func run(c *Context) int {
+
 
 	return 0
 }
@@ -233,6 +270,26 @@ func Point(x0, y0, blocks int32, r *sdl.Renderer) {
 	r.FillRect(&sdl.Rect{x0 * blocks, y0 * blocks, blocks, blocks})
 }
 
+var lastTick=time.Now()
+
+func Elapsed() int64 {
+    t:=time.Now()
+    elapsed := t.Sub(lastTick)
+    lastTick=t
+    if elapsed==0 { elapsed++ }
+    return int64(elapsed)
+}
+
 func main() {
-	os.Exit(run())
+    var ctx=New(8,100,80,"Asteroids")
+    defer ctx.Destroy()
+    
+    ctx.onCreate();
+    var running = true
+    
+    for running {
+        running= ctx.onUpdate(Elapsed())
+    }
+    
+	os.Exit(0)
 }
