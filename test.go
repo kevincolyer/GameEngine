@@ -31,7 +31,15 @@ func run() int {
 		return 2
 	}
 	defer renderer.Destroy()
+    
+//     surface, err := window.GetSurface()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	surface.FillRect(nil, 0)
 
+    renderer.Clear()
+    
 	var dx, dy, x, y int32
 	var w, h int32
 	w = 100
@@ -43,6 +51,7 @@ func run() int {
 	blocks := 2
 	blocksw := int(winWidth) / blocks
 	blocksh := int(winHeight) / blocks
+	
 
 	running := true
 	var oldLx, oldLy, nx, ny int32
@@ -53,8 +62,23 @@ func run() int {
 		//         renderer.SetDrawColor(r256(),r256(),r256(),255)
 		//         renderer.FillRect(&sdl.Rect{int32(rand.Intn(blocksw)*blocks),int32(rand.Intn(blocksh)*blocks),int32(blocks),int32(blocks)})
 		//         }
+        
+        // lines
+		renderer.SetDrawColor(r256(), r256(), r256(), 255)
+		nx = int32(rand.Intn(blocksw))
+		ny = int32(rand.Intn(blocksh))
+		Line(oldLx, oldLy, nx, ny, int32(blocks), renderer)
+		oldLx = nx
+		oldLy = ny
 
-		x += dx
+		// triangles
+		for i:=0;i<20;i++ {
+            renderer.SetDrawColor(r256(), r256(), r256(), 255)
+            Triangle(int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(blocks), renderer)
+        }
+
+        // rectangles
+        x += dx
 		y += dy
 		x = wrap(x, 0, winWidth)
 		y = wrap(y, 0, winHeight)
@@ -64,19 +88,9 @@ func run() int {
 		renderer.SetDrawColor(0, 0, 0, 255)
 		renderer.DrawRect(&sdl.Rect{x, y, w, h})
 
-		renderer.SetDrawColor(r256(), r256(), r256(), 255)
-		nx = int32(rand.Intn(blocksw))
-		ny = int32(rand.Intn(blocksh))
-		Line(oldLx, oldLy, nx, ny, int32(blocks), renderer)
-		oldLx = nx
-		oldLy = ny
-
-		renderer.SetDrawColor(r256(), r256(), r256(), 255)
-		Triangle(int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(rand.Intn(blocksw)), int32(rand.Intn(blocksh)), int32(blocks), renderer)
-
 		renderer.Present()
 
-		sdl.Delay(1)
+		sdl.Delay(10)
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
@@ -217,8 +231,6 @@ func bottomFlatTriangle(x1, y1, x2, y2, x3, y3, blocks int32, r *sdl.Renderer) {
 func topFlatTriangle(x1, y1, x2, y2, x3, y3, blocks int32, r *sdl.Renderer) {
 	invslope1 := float64(x3-x1) / float64(y3-y1)
 	invslope2 := float64(x3-x2) / float64(y3-y2)
-	fmt.Println("   tf invslope1 ", invslope1)
-	fmt.Println("   tf invslope2 ", invslope2)
 	curx1 := float64(x3)
 	curx2 := float64(x3)
 
