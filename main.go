@@ -50,7 +50,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	y += dy * elapsed
 	x = Wrap(x, 0, c.WinWidth)
 	y = Wrap(y, 0, c.WinHeight)
-	
+
 	R := NewRect(x, y, w, h)
 	c.Renderer.SetDrawColor(255, 127, 127, 255)
 	c.Renderer.FillRect(R)
@@ -71,11 +71,28 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	c.Renderer.Present()
 	Delay(1)
 	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-		switch event.(type) {
+		switch key := event.(type) {
 		case *sdl.QuitEvent:
 			println("Quit")
 			running = false
-			break
+		case *sdl.KeyboardEvent:
+			switch string(key.Keysym.Sym) {
+			case "q":
+				println("Quit")
+				running = false
+			case "w":
+				println("w pressed")
+			}
+			/* 			if key.State == sdl.RELEASED {
+			   				println(" key released")
+			   			}
+			   			if key.State == sdl.PRESSED {
+			   				println(" key pressed")
+			   			}
+			   			if key.Repeat > 0 {
+			   				println(" key repeating")
+						   } 
+			*/
 		}
 	}
 
