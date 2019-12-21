@@ -102,13 +102,84 @@ type TextTexture struct {
 	W       float64
 	H       float64
 }
+func NewSdlColor(r, g, b, a float64) sdl.Color {
+    return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
+}
+
+type Colour struct {
+    R float64
+    G float64
+    B float64
+    A float64
+}
+
+// fades a colour by a percentage
+func (c Colour) Fade(percent float64) Colour {
+    percent=Clamp01(percent) // just to keep things sane!
+    return Colour{R: c.R*percent, G: c.G*percent, B: c.B*percent, A: c.A}
+}
+
+func (c Colour) ToSDLColor() sdl.Color {
+    return NewSdlColor(c.R,c.G,c.B,c.A)
+}
+
+func (c Colour) Unpack() (uint8,uint8,uint8,uint8) {
+	return uint8(c.R),uint8(c.G),uint8(c.B),uint8(c.A) 
+}
+
+type v2d struct {
+    Dx float64
+    Dy float64
+}
+
+type p2d struct {
+    X float64
+    Y float64
+    Z float64 // for depth buffering
+}
+
+type zbuffer struct {
+    buf [][]float64
+    w int
+    h int
+}
+
+const  NEGINF float64  = -1000000
+
+// Clears zbuffer
+func (z *zbuffer) Clear() {
+    for x:=0;x<z.w;x++ {
+        for y:=0;y<z.h;y++ {
+            z.buf[x][y]=NEGINF
+        }
+    }
+}
+
+// sets z buffer to depth z if is nearer than prev val. Returns true or false
+func (zb *zbuffer) SetIfNearer(x,y,z float64) bool {
+    // nearer is > then NEGINF
+    if zb.buf[int(x)][int(y)]>z {
+        zb.buf[int(x)][int(y)]=z
+        return true
+    }
+    return false
+}
+
+func NewZbuffer(w,h float64) *zbuffer {
+    z := &zbuffer{
+		buf: make( [][]float64, int(w), int(h) ) ,
+        w: int(w),
+        h: int(h),
+    }
+    z.Clear()
+    return z 
+}
 
 // New texture for text display. Use .Draw to paint
-func (c *Context) NewText(stringToDisplay string, color sdl.Color) (t *TextTexture) {
+func (c *Context) NewText(stringToDisplay string, clr Colour ) (t *TextTexture) {
 	t = &TextTexture{}
 	var err error
-
-	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, color); err != nil {
+	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, clr.ToSDLColor()); err != nil {
 		panic("can't render font to buffer")
 	}
 	t.texture, err = c.Renderer.CreateTextureFromSurface(t.surface)
@@ -299,9 +370,9 @@ func (c *Context) Present() {
 }
 
 // Set Drawing color
-func (c *Context) SetDrawColor(r, g, b, a float64) {
+func (c *Context) SetDrawColor(rgba Colour) {
 	// color := &sdl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
-	c.Renderer.SetDrawColor(uint8(r), uint8(g), uint8(b), uint8(a))
+	c.Renderer.SetDrawColor(rgba.Unpack())
 }
 
 // Struct holding key status information

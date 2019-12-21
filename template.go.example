@@ -1,0 +1,57 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	. "github.com/kevincolyer/GameEngine/GameEngine"
+	"github.com/veandco/go-sdl2/sdl"
+)
+
+// helper function - can be passed in with GameEngine.New to modify the way blocks are drawn to the screen
+func wrapScreen(x, y float64) (float64, float64) {
+	return Wrap(x, 0, blocksw), Wrap(y, 0, blocksh)
+}
+
+
+func main() {
+	var ctx = New(8, 160, 80, "Example", nil)
+
+	onCreate(ctx)
+	var running = true
+
+	for running {
+		running = onUpdate(ctx, ctx.Elapsed())
+	}
+
+	ctx.Destroy()
+	os.Exit(0)
+}
+
+
+func onCreate(c *Context) {
+	fmt.Println("Created")
+	c.Clear()
+	c.Present()
+    t := c.NewText("Score:0", Colour{R: 255, G: 255, B: 255, A: 255})
+}
+
+func onUpdate(c *Context, elapsed float64) (running bool) {
+	// boilerplate to start
+    running, keys := c.PollQuitandKeys()
+	if keys.Event {
+		if keys.Key == "q" {
+			running = false
+		}
+	}
+	// Update code here...
+
+	
+	
+	
+	
+    // boilerplate to finish
+    c.Present()
+	Delay(1)
+	return running
+}
