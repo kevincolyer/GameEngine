@@ -167,8 +167,8 @@ func Clamp01(num float64) float64 {
 }
 
 // random number 0-255
-func R256() uint8 {
-	return uint8(rand.Intn(256))
+func R256() float64 {
+	return float64(rand.Intn(256))
 }
 
 // line drawing (blocks)
@@ -288,10 +288,56 @@ func (c *Context) topFlatTriangle(x1, y1, x2, y2, x3, y3 float64) {
 	}
 }
 
+// Clear renderer
+func (c *Context) Clear() {
+	c.Renderer.Clear()
+}
+
+// Render all to screen
+func (c *Context) Present() {
+	c.Renderer.Present()
+}
+
+// Set Drawing color
+func (c *Context) SetDrawColor(r, g, b, a float64) {
+	// color := &sdl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+	c.Renderer.SetDrawColor(uint8(r), uint8(g), uint8(b), uint8(a))
+}
+
+// Struct holding key status information
+type KeyStatus struct {
+	Key       string // key pressed as string
+	Pressed   bool
+	Released  bool
+	Repeating bool
+	Modifier  uint16
+	Event     bool
+}
+
+// Poll quit and key events. Returns running=True and a Key struct
+func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
+	running = true
+	keys.Event = false // unless something happens!
+	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+		switch key := event.(type) {
+		case *sdl.QuitEvent:
+			println("Quit")
+			running = false
+		case *sdl.KeyboardEvent:
+			keys.Key = string(key.Keysym.Sym)
+			keys.Pressed = (key.State == sdl.PRESSED)
+			keys.Released = (key.State == sdl.RELEASED)
+			keys.Pressed = (key.Repeat > 0)
+			keys.Modifier = key.Keysym.Mod
+			keys.Event = true
+		}
+	}
+	return running, keys
+}
+
 // Draws a point (blocks)
 func (c *Context) Point(x0, y0 float64) {
 	if c.screenXYtransform != nil {
-		println("transforming")
 		x0, y0 = c.screenXYtransform(x0, y0)
 	}
 	c.Renderer.FillRect(NewRect(x0*c.Blocks, y0*c.Blocks, c.Blocks, c.Blocks))

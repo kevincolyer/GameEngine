@@ -46,21 +46,20 @@ func onCreate(c *Context) {
 	blocks = c.Blocks
 	blocksw = c.ScrnWidth
 	blocksh = c.ScrnHeight
-	c.Renderer.Clear()
-	c.Renderer.Present()
+	c.Clear()
+	c.Present()
 
 }
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	var oldLx, oldLy, nx, ny float64
-	running = true
 
 	x += dx * elapsed
 	y += dy * elapsed
 	x = Wrap(x, 0, c.WinWidth)
 	y = Wrap(y, 0, c.WinHeight)
 
-	c.Renderer.SetDrawColor(R256(), R256(), R256(), 255)
+	c.SetDrawColor(R256(), R256(), R256(), 255)
 	nx = RandIntN(blocksw)
 	ny = RandIntN(blocksh)
 
@@ -68,13 +67,13 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	oldLx = nx
 	oldLy = ny
 
-	c.Renderer.SetDrawColor(R256(), R256(), R256(), 255)
+	c.SetDrawColor(R256(), R256(), R256(), 255)
 	c.Triangle(RandIntN(blocksw), RandIntN(blocksh), RandIntN(blocksw), RandIntN(blocksh), RandIntN(blocksw), RandIntN(blocksh))
 
 	R := NewRect(x, y, w, h)
-	c.Renderer.SetDrawColor(255, 127, 127, 255)
+	c.SetDrawColor(255, 127, 127, 255)
 	c.Renderer.FillRect(R)
-	c.Renderer.SetDrawColor(0, 0, 0, 255)
+	c.SetDrawColor(0, 0, 0, 255)
 	c.Renderer.DrawRect(R)
 
 	t := c.NewText("Hello Mum!", sdl.Color{R: 255, G: 0, B: 0, A: 255})
@@ -82,32 +81,14 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	t.Draw(c.Renderer, 300-(t.W/2), 200-(t.H/2), 0, 0)
 	t.Draw(c.Renderer, 400-(t.W/2), 100-(t.H/2), 0, 0)
 
-	c.Renderer.Present()
+	c.Present()
 	Delay(1)
-	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-		switch key := event.(type) {
-		case *sdl.QuitEvent:
-			println("Quit")
+	running, keys := c.PollQuitandKeys()
+	if keys.Event {
+		if keys.Key == "q" {
 			running = false
-		case *sdl.KeyboardEvent:
-			switch string(key.Keysym.Sym) {
-			case "q":
-				println("Quit")
-				running = false
-			case "w":
-				println("w pressed")
-			}
-			/* 			if key.State == sdl.RELEASED {
-			   				println(" key released")
-			   			}
-			   			if key.State == sdl.PRESSED {
-			   				println(" key pressed")
-			   			}
-			   			if key.Repeat > 0 {
-			   				println(" key repeating")
-						   }
-			*/
 		}
+		println(keys.Key, " pressed")
 	}
 
 	return running
