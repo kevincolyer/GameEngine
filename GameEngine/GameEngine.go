@@ -8,32 +8,43 @@ import (
 	"time"
 
 	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
+const (
+	fontPath = "GameEngine/OpenSans-Regular.ttf"
+	fontSize = 32
+)
+
+type TransformFunc func(x, y float64) (float64, float64)
+
 type Context struct {
-	WindowTitle string
-	WinWidth    float64
-	WinHeight   float64
-	Window      *sdl.Window
-	Renderer    *sdl.Renderer
-	Blocks      float64
-	ScrnWidth   float64
-	ScrnHeight  float64
-	lastTick    time.Time
+	WindowTitle       string
+	WinWidth          float64
+	WinHeight         float64
+	Window            *sdl.Window
+	Renderer          *sdl.Renderer
+	Blocks            float64
+	ScrnWidth         float64
+	ScrnHeight        float64
+	lastTick          time.Time
+	font              *ttf.Font
+	screenXYtransform TransformFunc
 }
 
 var ctx Context
 
-func New(b, sw, sh float64, title string) *Context {
+func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 	fmt.Println("starting Game engine")
 	ctx = Context{
-		Blocks:      b,
-		ScrnWidth:   sw,
-		ScrnHeight:  sh,
-		WinWidth:    sw * b,
-		WinHeight:   sh * b,
-		WindowTitle: title,
-		lastTick:    time.Now(),
+		Blocks:            b,
+		ScrnWidth:         sw,
+		ScrnHeight:        sh,
+		WinWidth:          sw * b,
+		WinHeight:         sh * b,
+		WindowTitle:       title,
+		lastTick:          time.Now(),
+		screenXYtransform: tf,
 	}
 	var err error
 	ctx.Window, err = sdl.CreateWindow(ctx.WindowTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
@@ -48,6 +59,15 @@ func New(b, sw, sh float64, title string) *Context {
 		fmt.Fprintf(os.Stderr, "Failed to create renderer: %s\n", err)
 		os.Exit(2)
 	}
+	// Font init
+	if err = ttf.Init(); err != nil {
+		println("Font initialisation failed", err)
+		os.Exit(3)
+	}
+	if ctx.font, err = ttf.OpenFont(fontPath, fontSize); err != nil {
+		println("Failed to load font", fontPath, err)
+		os.Exit(4)
+	}
 
 	return &ctx
 }
@@ -56,6 +76,8 @@ func New(b, sw, sh float64, title string) *Context {
 func (c *Context) Destroy() {
 	c.Window.Destroy()
 	c.Renderer.Destroy()
+	c.font.Close()
+	ttf.Quit()
 }
 
 // helper function to build and SDL rectangle from float64's
@@ -71,6 +93,44 @@ func Delay(s uint32) {
 // rand intn for sdl
 func RandIntN(i float64) float64 {
 	return float64(rand.Intn(int(i)))
+}
+
+// Holds rendering information for displaying ttf to a texture for renderer
+type TextTexture struct {
+	surface *sdl.Surface
+	texture *sdl.Texture
+	W       float64
+	H       float64
+}
+
+// New texture for text display. Use .Draw to paint
+func (c *Context) NewText(stringToDisplay string, color sdl.Color) (t *TextTexture) {
+	t = &TextTexture{}
+	var err error
+
+	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, color); err != nil {
+		panic("can't render font to buffer")
+	}
+	t.texture, err = c.Renderer.CreateTextureFromSurface(t.surface)
+	t.H = float64(t.surface.H)
+	t.W = float64(t.surface.W)
+	t.surface.Free()
+	return t
+}
+
+// Draws TextTexture to renderer at x,y with optional w,h (default to full w,h)
+func (t *TextTexture) Draw(r *sdl.Renderer, x, y, w, h float64) {
+	if w == 0 {
+		w = t.W
+	}
+	if h == 0 {
+		h = t.H
+	}
+
+	d := NewRect(x, y, w, h)
+	s := NewRect(0, 0, w, h)
+	// Draw the text around the center of the window
+	r.Copy(t.texture, s, d)
 }
 
 // returns number wraped around a low and hi boundary
@@ -113,7 +173,6 @@ func R256() uint8 {
 
 // line drawing (blocks)
 func (c *Context) Line(x0, y0, x1, y1 float64) {
-	blocks := c.Blocks
 	x0 = math.Round(x0)
 	x1 = math.Round(x1)
 	y0 = math.Round(y0)
@@ -142,7 +201,7 @@ func (c *Context) Line(x0, y0, x1, y1 float64) {
 	err := dx - dy
 
 	for {
-		c.Renderer.FillRect(NewRect(x0*blocks, y0*blocks, blocks, blocks))
+		c.Point(x0, y0)
 		if x0 == x1 && y0 == y1 {
 			break
 		}
@@ -231,6 +290,10 @@ func (c *Context) topFlatTriangle(x1, y1, x2, y2, x3, y3 float64) {
 
 // Draws a point (blocks)
 func (c *Context) Point(x0, y0 float64) {
+	if c.screenXYtransform != nil {
+		println("transforming")
+		x0, y0 = c.screenXYtransform(x0, y0)
+	}
 	c.Renderer.FillRect(NewRect(x0*c.Blocks, y0*c.Blocks, c.Blocks, c.Blocks))
 }
 
