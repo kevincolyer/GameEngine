@@ -429,5 +429,5 @@ func (c *Context) Elapsed() float64 {
 	if elapsed == 0 {
 		elapsed++
 	}
-	return (1 / elapsed) * 1000 * 1000
+	return elapsed/ 1000000000
 }

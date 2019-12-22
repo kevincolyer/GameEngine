@@ -57,6 +57,7 @@ type object struct {
 	w []P2D
 	size float64
 	angle float64
+	health int
 }
 
 func (o object) draw(c *Context) {
@@ -113,6 +114,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		bull:=object{
 			pos: P2D{ship.pos.X,ship.pos.Y},
 			vel: V2D{math.Sin(ship.angle)*elapsed,-math.Cos(ship.angle)*elapsed},
+			health: 100,
 		}
 		bullets=append(bullets,bull)
 		println(len(bullets))
