@@ -106,13 +106,18 @@ func NewSdlColor(r, g, b, a float64) sdl.Color {
     return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
 }
 
+
 type Colour struct {
     R float64
     G float64
     B float64
     A float64
 }
+func NewColour(r,g,b,a float64) Colour {
+	return Colour{r,g,b,a}
+}
 
+const PI = 3.141592
 // fades a colour by a percentage
 func (c Colour) Fade(percent float64) Colour {
     percent=Clamp01(percent) // just to keep things sane!
@@ -127,16 +132,18 @@ func (c Colour) Unpack() (uint8,uint8,uint8,uint8) {
 	return uint8(c.R),uint8(c.G),uint8(c.B),uint8(c.A) 
 }
 
-type v2d struct {
+
+type V2D struct {
     Dx float64
     Dy float64
 }
 
-type p2d struct {
+type P2D struct {
     X float64
     Y float64
-    Z float64 // for depth buffering
+//    Z float64 // for depth buffering
 }
+
 
 type zbuffer struct {
     buf [][]float64
@@ -422,5 +429,5 @@ func (c *Context) Elapsed() float64 {
 	if elapsed == 0 {
 		elapsed++
 	}
-	return 1 / elapsed * 1000 * 1000
+	return (1 / elapsed) * 1000 * 1000
 }

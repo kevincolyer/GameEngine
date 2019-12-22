@@ -5,13 +5,12 @@ import (
 	"os"
 
 	. "github.com/kevincolyer/GameEngine/GameEngine"
-	"github.com/veandco/go-sdl2/sdl"
 )
 
 // helper function - can be passed in with GameEngine.New to modify the way blocks are drawn to the screen
-func wrapScreen(x, y float64) (float64, float64) {
-	return Wrap(x, 0, blocksw), Wrap(y, 0, blocksh)
-}
+//func wrapScreen(x, y float64) (float64, float64) {
+//	return Wrap(x, 0, blocksw), Wrap(y, 0, blocksh)
+//}
 
 
 func main() {

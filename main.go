@@ -9,7 +9,7 @@ import (
 )
 
 
-func wrapScreen(x, y float64) (float64, float64) {
+func (wrapScreen(x, y float64) (float64, float64) {
 	return Wrap(x, 0, blocksw), Wrap(y, 0, blocksh)
 }
 
@@ -30,7 +30,7 @@ func main() {
 var dx, dy float64
 var x, y float64
 var w, h float64
-var blocks, blocksw, blocksh float64
+var blocksw, blocksh float64
 
 func onCreate(c *Context) {
 	fmt.Println("created")
