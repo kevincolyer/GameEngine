@@ -73,6 +73,8 @@ func (o object) draw(c *Context) {
 var ship object
 var score int32
 var worldSpeed float64
+var bulletSpeed float64
+var maxSpeed float64
 var bullets []object
 
 func onCreate(c *Context) {
@@ -87,12 +89,15 @@ func onCreate(c *Context) {
 		size: 6,
 		angle: 0,
 	}
-	worldSpeed=0.1
+	worldSpeed=2
+	bulletSpeed=worldSpeed*0.1
+	maxSpeed=math.Pow(2,2)
 }
 
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	// boilerplate to start
+	// println(elapsed)
     running, keys := c.PollQuitandKeys()
 	if keys.Event {
 		if keys.Key == "q" {
@@ -103,9 +108,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	c.SetDrawColor(BLACK)
 	c.Clear()
 	// keys
-	if keys.Key=="a" { ship.angle=ship.angle-1*elapsed}
-	if keys.Key=="d" { ship.angle=ship.angle+1*elapsed}
-	if keys.Key=="w" { 
+	if keys.Key=="a" { ship.angle=ship.angle-1*elapsed*worldSpeed}
+	if keys.Key=="d" { ship.angle=ship.angle+1*elapsed*worldSpeed}
+	if keys.Key=="w" && (ship.vel.Dx*ship.vel.Dx + ship.vel.Dy*ship.vel.Dy)<maxSpeed { 
 		ship.vel.Dx= math.Sin(ship.angle)*elapsed*worldSpeed + ship.vel.Dx 
 		ship.vel.Dy= -math.Cos(ship.angle)*elapsed*worldSpeed + ship.vel.Dy
 	}
@@ -113,8 +118,11 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	if keys.Key==" " {
 		bull:=object{
 			pos: P2D{ship.pos.X,ship.pos.Y},
-			vel: V2D{math.Sin(ship.angle)*elapsed,-math.Cos(ship.angle)*elapsed},
-			health: 100,
+			vel: V2D{
+				(math.Abs(ship.vel.Dx)+bulletSpeed)*math.Sin(ship.angle),
+				(math.Abs(ship.vel.Dx)+bulletSpeed)*-math.Cos(ship.angle),
+			},
+			health: 1000,
 		}
 		bullets=append(bullets,bull)
 		println(len(bullets))
@@ -125,9 +133,15 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	ship.pos.Y=Wrap(ship.pos.Y+ship.vel.Dy*elapsed,0,blocksh)
 		// bullets
 		for i:=range bullets {
-			bullets[i].pos.X=Wrap(bullets[i].pos.X+bullets[i].vel.Dx,0,blocksw)
-			bullets[i].pos.Y=Wrap(bullets[i].pos.Y+bullets[i].vel.Dy,0,blocksh)
+			if bullets[i].health>0 {
+				bullets[i].pos.X=Wrap(bullets[i].pos.X+bullets[i].vel.Dx,0,blocksw)
+				bullets[i].pos.Y=Wrap(bullets[i].pos.Y+bullets[i].vel.Dy,0,blocksh)
+				bullets[i].health--	
+			}
 		}
+		if len(bullets)>1 && bullets[0].health==0 { bullets=bullets[1:]
+		println("pruned bullet",len(bullets)) 
+	}
 
 	// rotate
 	for i := range ship.w {
@@ -148,7 +162,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	c.SetDrawColor(WHITE)
 	ship.draw(c)
 	for i:=range bullets {
-		c.Point(bullets[i].pos.X,bullets[i].pos.Y)
+		if bullets[i].health>0 {
+			c.Point(bullets[i].pos.X,bullets[i].pos.Y)
+		}
 	}	
 	
 	

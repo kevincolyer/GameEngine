@@ -429,5 +429,11 @@ func (c *Context) Elapsed() float64 {
 	if elapsed == 0 {
 		elapsed++
 	}
-	return elapsed/ 1000000000
+	return elapsed / (1000*1000 *10)
+}
+
+func Sign(s float64) float64 {
+	if s==0 { return 0 }
+	if s<0 {return -1 }
+	return 1
 }
