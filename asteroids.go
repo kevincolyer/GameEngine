@@ -125,7 +125,6 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			health: 1000,
 		}
 		bullets=append(bullets,bull)
-		println(len(bullets))
 	}
 	// manipulations
 		// ship
@@ -134,13 +133,13 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		// bullets
 		for i:=range bullets {
 			if bullets[i].health>0 {
-				bullets[i].pos.X=Wrap(bullets[i].pos.X+bullets[i].vel.Dx,0,blocksw)
-				bullets[i].pos.Y=Wrap(bullets[i].pos.Y+bullets[i].vel.Dy,0,blocksh)
+				bullets[i].pos.X+=bullets[i].vel.Dx
+				bullets[i].pos.Y+=bullets[i].vel.Dy
 				bullets[i].health--	
+				if bullets[i].pos.X>blocksw || bullets[i].pos.X<0 ||  bullets[i].pos.Y>blocksh || bullets[i].pos.Y<0 { bullets[i].health=0 }
 			}
 		}
 		if len(bullets)>1 && bullets[0].health==0 { bullets=bullets[1:]
-		println("pruned bullet",len(bullets)) 
 	}
 
 	// rotate
