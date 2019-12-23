@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"math"
+	"math/rand"
 	. "github.com/kevincolyer/GameEngine/GameEngine"
 )
 
@@ -57,6 +58,7 @@ type object struct {
 	w []P2D
 	size float64
 	angle float64
+	Da float64
 	health int
 }
 
@@ -69,6 +71,24 @@ func (o object) draw(c *Context) {
 	c.Line(o.w[0].X,o.w[0].Y,o.w[l-1].X,o.w[l-1].Y)
 }
 
+func (o object) ScaleRotateTranslate() {
+	// rotate
+	for i := range o.w {
+		o.w[i].X=math.Cos(o.angle)*o.model[i].X-math.Sin(o.angle)*o.model[i].Y
+		o.w[i].Y=math.Sin(o.angle)*o.model[i].X+math.Cos(o.angle)*o.model[i].Y
+	}
+	// scale
+	for i := range o.w {
+		o.w[i].X=o.w[i].X*o.size
+		o.w[i].Y=o.w[i].Y*o.size
+	}
+	// translate
+	for i := range o.w {
+		o.w[i].X+=o.pos.X
+		o.w[i].Y+=o.pos.Y
+	}	
+}
+
 // GAME GLOBAL VARIABLES
 var ship object
 var score int32
@@ -76,11 +96,20 @@ var worldSpeed float64
 var bulletSpeed float64
 var maxSpeed float64
 var bullets []object
+var rocks []object
 
 func onCreate(c *Context) {
 	fmt.Println("Created")
 	c.Clear()
 	c.Present()
+	resetGame()
+	worldSpeed=1
+	bulletSpeed=worldSpeed*0.1
+	maxSpeed=math.Pow(2,2)
+
+}
+
+func resetGame() {
 	ship=object{
 		pos: P2D{blocksw/2,blocksh/2}, 
 		vel: V2D{0,0},
@@ -89,11 +118,25 @@ func onCreate(c *Context) {
 		size: 6,
 		angle: 0,
 	}
-	worldSpeed=2
-	bulletSpeed=worldSpeed*0.1
-	maxSpeed=math.Pow(2,2)
+	score = 0 
+	bullets = nil
+	rocks = nil
+	rocks = append(rocks, makeRock(blocksw/4,blocksh/2,16),makeRock(blocksw*3/4,blocksh/2,16))
+
 }
 
+func makeRock(x,y float64, size float64) (rock object) {
+	rock=object{ size:size, pos: P2D{X:x, Y:y} }
+	for a:=0.0; a<2*PI; a+=2*PI/20 {
+		r:=0.6+rand.Float64()*0.4
+		rock.model=append(rock.model,P2D{math.Sin(a)*r,-math.Cos(a)*r})
+	}
+	rock.Da=rand.Float64()*PI/150-PI/300
+	rock.angle=rand.Float64()*PI*2
+	rock.w=append(rock.w, rock.model...)
+	rock.vel=V2D{(rand.Float64()-0.5)*math.Sin(rock.angle),-(rand.Float64()-0.5)*math.Cos(rock.angle)}
+	return
+}
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	// boilerplate to start
@@ -111,8 +154,8 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	if keys.Key=="a" { ship.angle=ship.angle-1*elapsed*worldSpeed}
 	if keys.Key=="d" { ship.angle=ship.angle+1*elapsed*worldSpeed}
 	if keys.Key=="w" && (ship.vel.Dx*ship.vel.Dx + ship.vel.Dy*ship.vel.Dy)<maxSpeed { 
-		ship.vel.Dx= math.Sin(ship.angle)*elapsed*worldSpeed + ship.vel.Dx 
-		ship.vel.Dy= -math.Cos(ship.angle)*elapsed*worldSpeed + ship.vel.Dy
+		ship.vel.Dx= math.Sin(ship.angle)*elapsed*worldSpeed*0.5 + ship.vel.Dx 
+		ship.vel.Dy= -math.Cos(ship.angle)*elapsed*worldSpeed*0.5 + ship.vel.Dy
 	}
 	if keys.Key=="x" { ship.vel.Dx=0; ship.vel.Dy=0}
 	if keys.Key==" " {
@@ -141,25 +184,39 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		}
 		if len(bullets)>1 && bullets[0].health==0 { bullets=bullets[1:]
 	}
+	for i:= range rocks {
+		rocks[i].angle=rocks[i].angle+rocks[i].Da*elapsed
+		rocks[i].pos.X=Wrap(rocks[i].pos.X+rocks[i].vel.Dx*elapsed,0,blocksw)
+		rocks[i].pos.Y=Wrap(rocks[i].pos.Y+rocks[i].vel.Dy*elapsed,0,blocksh)
+		rocks[i].ScaleRotateTranslate()
+	}
 
-	// rotate
-	for i := range ship.w {
-		ship.w[i].X=math.Cos(ship.angle)*ship.model[i].X-math.Sin(ship.angle)*ship.model[i].Y
-		ship.w[i].Y=math.Sin(ship.angle)*ship.model[i].X+math.Cos(ship.angle)*ship.model[i].Y
-	}
-	// scale
-	for i := range ship.w {
-		ship.w[i].X=ship.w[i].X*ship.size
-		ship.w[i].Y=ship.w[i].Y*ship.size
-	}
-	// translate
-	for i := range ship.w {
-		ship.w[i].X+=ship.pos.X
-		ship.w[i].Y+=ship.pos.Y
-	}
+	// // rotate
+	// for i := range ship.w {
+	// 	ship.w[i].X=math.Cos(ship.angle)*ship.model[i].X-math.Sin(ship.angle)*ship.model[i].Y
+	// 	ship.w[i].Y=math.Sin(ship.angle)*ship.model[i].X+math.Cos(ship.angle)*ship.model[i].Y
+	// }
+	// // scale
+	// for i := range ship.w {
+	// 	ship.w[i].X=ship.w[i].X*ship.size
+	// 	ship.w[i].Y=ship.w[i].Y*ship.size
+	// }
+	// // translate
+	// for i := range ship.w {
+	// 	ship.w[i].X+=ship.pos.X
+	// 	ship.w[i].Y+=ship.pos.Y
+	// }
+	ship.ScaleRotateTranslate()
+
 	// draw
+	c.SetDrawColor(GREY50)
+	for _,r:= range rocks {
+		r.draw(c)
+	}
+
 	c.SetDrawColor(WHITE)
 	ship.draw(c)
+
 	for i:=range bullets {
 		if bullets[i].health>0 {
 			c.Point(bullets[i].pos.X,bullets[i].pos.Y)
@@ -168,7 +225,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	
 	
 	drawScore(c,score)
-	drawFPS(c,elapsed)
+	//drawFPS(c,elapsed)
     // boilerplate to finish
     c.Present()
 	Delay(1)
