@@ -1,9 +1,8 @@
 package main
 
 import (
-
-	// "flag"
 	"container/list"
+	"flag"
 	"fmt"
 	"math"
 	"math/rand"
@@ -20,14 +19,14 @@ func wrapScreen(x, y float64) (float64, float64) {
 var blocksw, blocksh, blocks float64
 var WHITE, BLACK, RED, GREEN, BLUE, GREY50, DARKRED, SADDLEBROWN, STEELBLUE Colour
 
-// var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-// var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+var fps = flag.Bool("fps", false, "Display Frames per second")
+var blocksi = flag.Int("blocks", 8, "Blocks of X pixels")
 
 func main() {
-
+	flag.Parse()
 	blocksw = 160
 	blocksh = 80
-	blocks = 8
+	blocks = float64(*blocksi)
 	WHITE = NewColour(255, 255, 255, 255)
 	BLACK = NewColour(0, 0, 0, 255)
 	RED = NewColour(255, 0, 0, 255)
@@ -61,7 +60,7 @@ type Object struct {
 	Health int
 }
 
-func (o Object) draw(c *Context) {
+func (o Object) Draw(c *Context) {
 	l := len(o.W)
 	if l == 1 {
 		c.Point(o.W[0].X, o.W[0].Y)
@@ -99,16 +98,15 @@ var worldSpeed float64
 var bulletSpeed float64
 var maxSpeed float64
 var bullets *list.List
-var rocks []Object
+var rocks *list.List
 
 func onCreate(c *Context) {
-	fmt.Println("Created")
-
 	worldSpeed = 1
 	bulletSpeed = worldSpeed * 0.1
 	maxSpeed = math.Pow(2, 2)
 	// must be before bullets.Init
 	bullets = list.New()
+	rocks = list.New()
 
 	c.Clear()
 	c.Present()
@@ -129,13 +127,13 @@ func resetGame() {
 	}
 	score = 0
 	bullets.Init()
-	rocks = nil
-	rocks = append(rocks, makeRock(blocksw/4, blocksh/2, 16), makeRock(blocksw*3/4, blocksh/2, 16))
-
+	rocks.Init()
+	rocks.PushBack(makeRock(blocksw/4, blocksh/2, 16))
+	rocks.PushBack(makeRock(blocksw*3/4, blocksh/2, 16))
 }
 
-func makeRock(x, y float64, size float64) (rock Object) {
-	rock = Object{size: size, Pos: P2D{X: x, Y: y}, Health: 1}
+func makeRock(x, y float64, size float64) (rock *Object) {
+	rock = &Object{size: size, Pos: P2D{X: x, Y: y}, Health: 1}
 	for a := 0.0; a < 2*PI; a += 2 * PI / 20 {
 		r := 0.6 + rand.Float64()*0.4
 		rock.Model = append(rock.Model, P2D{math.Sin(a) * r, -math.Cos(a) * r})
@@ -204,24 +202,23 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		}
 	}
 
-	var newRocks []Object
 	// rocks
-	for i := range rocks {
-		println(i, len(rocks))
-		if rocks[i].Health > 0 {
+	for r := rocks.Front(); r != nil; r = r.Next() {
+		rock := r.Value.(*Object)
+		if rock.Health > 0 {
 
-			rocks[i].Angle = rocks[i].Angle + rocks[i].Da*elapsed
-			rocks[i].Pos.X = Wrap(rocks[i].Pos.X+rocks[i].Vel.Dx*elapsed, 0, blocksw)
-			rocks[i].Pos.Y = Wrap(rocks[i].Pos.Y+rocks[i].Vel.Dy*elapsed, 0, blocksh)
-			rocks[i].ScaleRotateTranslate()
+			rock.Angle = rock.Angle + rock.Da*elapsed
+			rock.Pos.X = Wrap(rock.Pos.X+rock.Vel.Dx*elapsed, 0, blocksw)
+			rock.Pos.Y = Wrap(rock.Pos.Y+rock.Vel.Dy*elapsed, 0, blocksh)
+			rock.ScaleRotateTranslate()
 
 			// collision detection
 			// ship
-			rockx := rocks[i].Pos.X
-			rocky := rocks[i].Pos.Y
+			rockx := rock.Pos.X
+			rocky := rock.Pos.Y
 			dx := rockx - ship.Pos.X
 			dy := rocky - ship.Pos.Y
-			if dx*dx+dy*dy < 1+rocks[i].size*rocks[i].size {
+			if dx*dx+dy*dy < 1+rock.size*rock.size {
 				resetGame()
 			}
 
@@ -233,49 +230,45 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 				}
 				dx = rockx - v.Pos.X
 				dy = rocky - v.Pos.Y
-				if dx*dx+dy*dy < rocks[i].size {
+				if dx*dx+dy*dy < rock.size {
 					// hit!
 					// remove bullet, rock and increment score
-					rocks[i].Health = 0
-					score += (16 - int32(rocks[i].size)) * 10
+					rock.Health = 0
+					score += (16 - int32(rock.size)) * 10
 					v.Health = 0
-					if rocks[i].size > 4 {
+					if rock.size > 4 {
 						// make two more rocks
-						newRocks = append(newRocks, makeRock(rocks[i].Pos.X+6, rocks[i].Pos.Y-6, rocks[i].size/2))
-						newRocks = append(newRocks, makeRock(rocks[i].Pos.X-6, rocks[i].Pos.Y+6, rocks[i].size/2))
+						rocks.PushFront(makeRock(rock.Pos.X+6, rock.Pos.Y-6, rock.size/2))
+						rocks.PushFront(makeRock(rock.Pos.X-6, rock.Pos.Y+6, rock.size/2))
 					}
+					rocks.Remove(r)
 				}
 			} // end bullets loop
 		}
 	} // end rocks loop
-	// purge rocks
-	if len(rocks) > 1 && rocks[0].Health == 0 {
-		rocks = rocks[1:]
-	}
-	// add any new rocks
-	if len(newRocks) > 1 {
-		rocks = append(rocks, newRocks...)
-	}
+
 	// add two rocks if all rocks destroyed
-	if len(rocks) == 0 {
+	if rocks.Len() == 0 {
 		score += 1000
-		rocks = append(rocks, makeRock(Wrap(ship.Pos.X+blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
-		rocks = append(rocks, makeRock(Wrap(ship.Pos.X-blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
+		rocks.PushFront(makeRock(Wrap(ship.Pos.X+blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
+		rocks.PushFront(makeRock(Wrap(ship.Pos.X-blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
 	}
 
 	// rotate scale and translate
 	ship.ScaleRotateTranslate()
 
-	// draw ///////////////////////////////////////////////////
+	// Draw
+	///////////////////////////////////////////////////
 	c.SetDrawColor(SADDLEBROWN)
-	for _, r := range rocks {
-		if r.Health > 0 {
-			r.draw(c)
+	for r := rocks.Front(); r != nil; r = r.Next() {
+		rock := r.Value.(*Object)
+		if rock.Health > 0 {
+			rock.Draw(c)
 		}
 	}
 
 	c.SetDrawColor(WHITE)
-	ship.draw(c)
+	ship.Draw(c)
 
 	c.SetDrawColor(STEELBLUE)
 	for b := bullets.Front(); b != nil; b = b.Next() {
@@ -288,7 +281,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	// Draw text and 'top' layers
 	c.SetDrawColor(DARKRED)
 	c.DrawText(1, 1, 2, fmt.Sprintf("hi: %v score:%v", hiscore, score))
-	c.DrawText(1, 17, 4, fmt.Sprintf("fps:%d", int(100/elapsed)))
+	if *fps {
+		c.DrawText(1, 17, 4, fmt.Sprintf("fps:%d", int(100/elapsed)))
+	}
 	// boilerplate to finish
 	c.Present()
 	Delay(1)
