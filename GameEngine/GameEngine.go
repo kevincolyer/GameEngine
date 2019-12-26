@@ -106,10 +106,12 @@ type TextTexture struct {
 	H       float64
 }
 
+// NewSdlColor takes floats and returs an sdl suitalbe color object
 func NewSdlColor(r, g, b, a float64) sdl.Color {
 	return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
 }
 
+// Colour struct for float64 colour values
 type Colour struct {
 	R float64
 	G float64
@@ -117,16 +119,18 @@ type Colour struct {
 	A float64
 }
 
+// NewColour gives a new colour object
 func NewColour(r, g, b, a float64) Colour {
 	return Colour{r, g, b, a}
 }
 
+// PI constant
 const PI = 3.141592
 
-// fades a colour by a percentage
-func (c Colour) Fade(percent float64) Colour {
-	percent = Clamp01(percent) // just to keep things sane!
-	return Colour{R: c.R * percent, G: c.G * percent, B: c.B * percent, A: c.A}
+// Fade a colour by a percentage
+func (c Colour) Fade(normalised float64) Colour {
+	normalised = Clamp01(normalised) // just to keep things sane!
+	return Colour{R: c.R * normalised, G: c.G * normalised, B: c.B * normalised, A: c.A}
 }
 
 func (c Colour) ToSDLColor() sdl.Color {

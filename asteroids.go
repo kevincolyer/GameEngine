@@ -100,6 +100,7 @@ var bulletSpeed float64
 var maxSpeed float64
 var bullets *list.List
 var rocks *list.List
+var explosion [24]*Object
 
 func onCreate(c *Context) {
 	worldSpeed = 1
@@ -147,12 +148,52 @@ func makeRock(x, y float64, size float64) (rock *Object) {
 	return
 }
 
-func drawExplosion() {
-	resetGame()
+func drawExplosion(c *Context, elapsed float64) {
+	if explosion[0].size < 0 {
+		resetGame()
+		return
+	}
+	for _, j := range explosion {
+		col := WHITE
+		if rand.ExpFloat64() > 0.5 {
+			col = RED
+		}
+		col = col.Fade(j.size / 25.0)
+		// update
+		j.Pos.X += j.Vel.Dx * elapsed * worldSpeed * 0.05
+		j.Pos.Y += j.Vel.Dy * elapsed * worldSpeed * 0.05
+		j.size -= elapsed * worldSpeed * .1
+		c.SetDrawColor(col)
+		c.Point(j.Pos.X, j.Pos.Y)
+	}
 }
 
-func makeExplosion(c *Context) {
+func makeExplosion() {
+	k := 0
+	for i := 0; i < 3; i++ {
+		x0 := ship.W[i].X
+		y0 := ship.W[i].Y
+		x1 := ship.W[(i+1)%3].X
+		y1 := ship.W[(i+1)%3].Y
+		dx := (x0 - x1) / 9
+		dy := (y0 - y1) / 9
+		// split into 8 points
+		for j := 0.0; j < 8; j++ {
+			x := x0 + dx*j
+			y := y0 + dy*j
+			theta := math.Atan2(x-ship.Pos.X, y-ship.Pos.Y) + rand.Float64()*PI/3 - PI/6
 
+			explosion[k] = &Object{
+				size: 25,
+				Pos:  P2D{x, y},
+				Vel: V2D{
+					ship.Vel.Dx + math.Sin(theta)*4,
+					ship.Vel.Dy + math.Cos(theta)*4,
+				},
+			}
+			k++
+		}
+	}
 }
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
@@ -182,7 +223,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		ship.Vel.Dx = 0
 		ship.Vel.Dy = 0
 	}
-	if keys.Key == " " {
+	if keys.Key == " " && explodeShip == false {
 		bull := &Object{
 			Pos: P2D{ship.Pos.X, ship.Pos.Y},
 			Vel: V2D{
@@ -228,9 +269,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			rocky := rock.Pos.Y
 			dx := rockx - ship.Pos.X
 			dy := rocky - ship.Pos.Y
-			if dx*dx+dy*dy < 1+rock.size*rock.size {
+			if dx*dx+dy*dy < (ship.size+rock.size)*(ship.size+rock.size) && explodeShip != true {
 				explodeShip = true
-				//				resetGame()
+				makeExplosion()
 			}
 
 			// bullets
@@ -241,7 +282,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 				}
 				dx = rockx - v.Pos.X
 				dy = rocky - v.Pos.Y
-				if dx*dx+dy*dy < rock.size {
+				if dx*dx+dy*dy < rock.size*rock.size {
 					// hit!
 					// remove bullet, rock and increment score
 					rock.Health = 0
@@ -281,7 +322,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		c.SetDrawColor(WHITE)
 		ship.Draw(c)
 	} else {
-		drawExplosion()
+		drawExplosion(c, elapsed)
 	}
 
 	c.SetDrawColor(STEELBLUE)
@@ -294,7 +335,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 
 	// Draw text and 'top' layers
 	c.SetDrawColor(DARKRED)
-	c.DrawText(1, 1, 2, fmt.Sprintf("hi: %v score:%v", hiscore, score))
+	c.DrawText(1, 1, 2, fmt.Sprintf("hi:%v score:%v", hiscore, score))
 	if *fps {
 		c.DrawText(1, 17, 4, fmt.Sprintf("fps:%d", int(100/elapsed)))
 	}
