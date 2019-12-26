@@ -1,7 +1,9 @@
 package main
 
 import (
+
 	// "flag"
+	"container/list"
 	"fmt"
 	"math"
 	"math/rand"
@@ -48,98 +50,100 @@ func main() {
 	os.Exit(0)
 }
 
-type object struct {
-	pos    P2D
-	vel    V2D
-	model  []P2D
-	w      []P2D
+type Object struct {
+	Pos    P2D
+	Vel    V2D
+	Model  []P2D
+	W      []P2D
 	size   float64
-	angle  float64
+	Angle  float64
 	Da     float64
-	health int
+	Health int
 }
 
-func (o object) draw(c *Context) {
-	l := len(o.w)
+func (o Object) draw(c *Context) {
+	l := len(o.W)
 	if l == 1 {
-		c.Point(o.w[0].X, o.w[0].Y)
+		c.Point(o.W[0].X, o.W[0].Y)
 		return
 	}
 	for i := 1; i < l; i++ {
-		c.Line(o.w[i-1].X, o.w[i-1].Y, o.w[i].X, o.w[i].Y)
+		c.Line(o.W[i-1].X, o.W[i-1].Y, o.W[i].X, o.W[i].Y)
 	}
-	c.Line(o.w[0].X, o.w[0].Y, o.w[l-1].X, o.w[l-1].Y)
+	c.Line(o.W[0].X, o.W[0].Y, o.W[l-1].X, o.W[l-1].Y)
 }
 
-func (o object) ScaleRotateTranslate() {
+func (o Object) ScaleRotateTranslate() {
 	// rotate
-	for i := range o.w {
-		o.w[i].X = math.Cos(o.angle)*o.model[i].X - math.Sin(o.angle)*o.model[i].Y
-		o.w[i].Y = math.Sin(o.angle)*o.model[i].X + math.Cos(o.angle)*o.model[i].Y
+	for i := range o.W {
+		o.W[i].X = math.Cos(o.Angle)*o.Model[i].X - math.Sin(o.Angle)*o.Model[i].Y
+		o.W[i].Y = math.Sin(o.Angle)*o.Model[i].X + math.Cos(o.Angle)*o.Model[i].Y
 	}
 	// scale
-	for i := range o.w {
-		o.w[i].X = o.w[i].X * o.size
-		o.w[i].Y = o.w[i].Y * o.size
+	for i := range o.W {
+		o.W[i].X = o.W[i].X * o.size
+		o.W[i].Y = o.W[i].Y * o.size
 	}
 	// translate
-	for i := range o.w {
-		o.w[i].X += o.pos.X
-		o.w[i].Y += o.pos.Y
+	for i := range o.W {
+		o.W[i].X += o.Pos.X
+		o.W[i].Y += o.Pos.Y
 	}
 }
 
 // GAME GLOBAL VARIABLES
-var ship object
+var ship Object
 var score int32
 var hiscore int32 = 0
 var worldSpeed float64
 var bulletSpeed float64
 var maxSpeed float64
-var bullets []object
-var rocks []object
+var bullets *list.List
+var rocks []Object
 
 func onCreate(c *Context) {
 	fmt.Println("Created")
 
-	c.Clear()
-	c.Present()
-	resetGame()
 	worldSpeed = 1
 	bulletSpeed = worldSpeed * 0.1
 	maxSpeed = math.Pow(2, 2)
+	// must be before bullets.Init
+	bullets = list.New()
 
+	c.Clear()
+	c.Present()
+	resetGame()
 }
 
 func resetGame() {
-	ship = object{
-		pos:   P2D{blocksw / 2, blocksh / 2},
-		vel:   V2D{0, 0},
-		model: []P2D{P2D{0, -1}, P2D{-0.5, 0.5}, P2D{0.5, 0.5}},
-		w:     []P2D{P2D{}, P2D{}, P2D{}},
+	ship = Object{
+		Pos:   P2D{blocksw / 2, blocksh / 2},
+		Vel:   V2D{0, 0},
+		Model: []P2D{P2D{0, -1}, P2D{-0.5, 0.5}, P2D{0.5, 0.5}},
+		W:     []P2D{P2D{}, P2D{}, P2D{}},
 		size:  6,
-		angle: 0,
+		Angle: 0,
 	}
 	if score > hiscore {
 		hiscore = score
 	}
 	score = 0
-	bullets = nil
+	bullets.Init()
 	rocks = nil
 	rocks = append(rocks, makeRock(blocksw/4, blocksh/2, 16), makeRock(blocksw*3/4, blocksh/2, 16))
 
 }
 
-func makeRock(x, y float64, size float64) (rock object) {
-	rock = object{size: size, pos: P2D{X: x, Y: y}, health: 1}
+func makeRock(x, y float64, size float64) (rock Object) {
+	rock = Object{size: size, Pos: P2D{X: x, Y: y}, Health: 1}
 	for a := 0.0; a < 2*PI; a += 2 * PI / 20 {
 		r := 0.6 + rand.Float64()*0.4
-		rock.model = append(rock.model, P2D{math.Sin(a) * r, -math.Cos(a) * r})
+		rock.Model = append(rock.Model, P2D{math.Sin(a) * r, -math.Cos(a) * r})
 	}
 	rock.Da = rand.Float64()*PI/150 - PI/300
-	rock.angle = rand.Float64() * PI * 2
-	rock.w = append(rock.w, rock.model...)
-	rock.vel = V2D{(rand.Float64() - 0.5) * math.Sin(rock.angle), -(rand.Float64() - 0.5) * math.Cos(rock.angle)}
+	rock.Angle = rand.Float64() * PI * 2
+	rock.W = append(rock.W, rock.Model...)
+	rock.Vel = V2D{(rand.Float64() - 0.5) * math.Sin(rock.Angle), -(rand.Float64() - 0.5) * math.Cos(rock.Angle)}
 	return
 }
 
@@ -157,96 +161,106 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	c.Clear()
 	// keys //////////////////////////////////////////
 	if keys.Key == "a" {
-		ship.angle = ship.angle - 1*elapsed*worldSpeed
+		ship.Angle = ship.Angle - 1*elapsed*worldSpeed
 	}
 	if keys.Key == "d" {
-		ship.angle = ship.angle + 1*elapsed*worldSpeed
+		ship.Angle = ship.Angle + 1*elapsed*worldSpeed
 	}
-	if keys.Key == "w" && (ship.vel.Dx*ship.vel.Dx+ship.vel.Dy*ship.vel.Dy) < maxSpeed {
-		ship.vel.Dx = math.Sin(ship.angle)*elapsed*worldSpeed*0.5 + ship.vel.Dx
-		ship.vel.Dy = -math.Cos(ship.angle)*elapsed*worldSpeed*0.5 + ship.vel.Dy
+	if keys.Key == "w" && (ship.Vel.Dx*ship.Vel.Dx+ship.Vel.Dy*ship.Vel.Dy) < maxSpeed {
+		ship.Vel.Dx = math.Sin(ship.Angle)*elapsed*worldSpeed*0.5 + ship.Vel.Dx
+		ship.Vel.Dy = -math.Cos(ship.Angle)*elapsed*worldSpeed*0.5 + ship.Vel.Dy
 	}
 	if keys.Key == "x" {
-		ship.vel.Dx = 0
-		ship.vel.Dy = 0
+		ship.Vel.Dx = 0
+		ship.Vel.Dy = 0
 	}
 	if keys.Key == " " {
-		bull := object{
-			pos: P2D{ship.pos.X, ship.pos.Y},
-			vel: V2D{
-				(math.Abs(ship.vel.Dx) + bulletSpeed) * math.Sin(ship.angle),
-				(math.Abs(ship.vel.Dx) + bulletSpeed) * -math.Cos(ship.angle),
+		bull := &Object{
+			Pos: P2D{ship.Pos.X, ship.Pos.Y},
+			Vel: V2D{
+				(math.Abs(ship.Vel.Dx) + bulletSpeed) * math.Sin(ship.Angle),
+				(math.Abs(ship.Vel.Dx) + bulletSpeed) * -math.Cos(ship.Angle),
 			},
-			health: 1000,
+			Health: 1000,
 		}
-		bullets = append(bullets, bull)
+		bullets.PushFront(bull)
 	}
 	// manipulations /////////////////////////////////////
 	// ship
-	ship.pos.X = Wrap(ship.pos.X+ship.vel.Dx*elapsed, 0, blocksw)
-	ship.pos.Y = Wrap(ship.pos.Y+ship.vel.Dy*elapsed, 0, blocksh)
+	ship.Pos.X = Wrap(ship.Pos.X+ship.Vel.Dx*elapsed, 0, blocksw)
+	ship.Pos.Y = Wrap(ship.Pos.Y+ship.Vel.Dy*elapsed, 0, blocksw)
 
-	// bullets
-	for i := range bullets {
-		if bullets[i].health > 0 {
-			bullets[i].pos.X += bullets[i].vel.Dx
-			bullets[i].pos.Y += bullets[i].vel.Dy
-			bullets[i].health--
-			if bullets[i].pos.X > blocksw || bullets[i].pos.X < 0 || bullets[i].pos.Y > blocksh || bullets[i].pos.Y < 0 {
-				bullets[i].health = 0
+	// bullets(
+	for b := bullets.Front(); b != nil; b = b.Next() {
+		v := b.Value.(*Object)
+		if v.Health > 0 {
+			v.Pos.X += v.Vel.Dx
+			v.Pos.Y += v.Vel.Dy
+			v.Health--
+			if v.Pos.X > blocksw || v.Pos.X < 0 || v.Pos.Y > blocksh || v.Pos.Y < 0 {
+				v.Health = 0
+				bullets.Remove(b)
 			}
 		}
 	}
-	if len(bullets) > 1 && bullets[0].health == 0 {
-		bullets = bullets[1:]
-	}
-	var newRocks []object
+
+	var newRocks []Object
 	// rocks
 	for i := range rocks {
-		if rocks[i].health == 0 {
-			continue
-		}
-		rocks[i].angle = rocks[i].angle + rocks[i].Da*elapsed
-		rocks[i].pos.X = Wrap(rocks[i].pos.X+rocks[i].vel.Dx*elapsed, 0, blocksw)
-		rocks[i].pos.Y = Wrap(rocks[i].pos.Y+rocks[i].vel.Dy*elapsed, 0, blocksh)
-		rocks[i].ScaleRotateTranslate()
-		// collision detection
-		// ship
-		rockx := rocks[i].pos.X
-		rocky := rocks[i].pos.Y
-		dx := rockx - ship.pos.X
-		dy := rocky - ship.pos.Y
-		if dx*dx+dy*dy < 1+rocks[i].size*rocks[i].size {
-			resetGame()
-		}
-		// bullets
-		for _, b := range bullets {
-			if b.health == 0 {
-				continue
+		println(i, len(rocks))
+		if rocks[i].Health > 0 {
+
+			rocks[i].Angle = rocks[i].Angle + rocks[i].Da*elapsed
+			rocks[i].Pos.X = Wrap(rocks[i].Pos.X+rocks[i].Vel.Dx*elapsed, 0, blocksw)
+			rocks[i].Pos.Y = Wrap(rocks[i].Pos.Y+rocks[i].Vel.Dy*elapsed, 0, blocksh)
+			rocks[i].ScaleRotateTranslate()
+
+			// collision detection
+			// ship
+			rockx := rocks[i].Pos.X
+			rocky := rocks[i].Pos.Y
+			dx := rockx - ship.Pos.X
+			dy := rocky - ship.Pos.Y
+			if dx*dx+dy*dy < 1+rocks[i].size*rocks[i].size {
+				resetGame()
 			}
-			dx = rockx - b.pos.X
-			dy = rocky - b.pos.Y
-			if dx*dx+dy*dy < rocks[i].size {
-				// hit!
-				// remove bullet, rock and increment score
-				rocks[i].health = 0
-				score += (16 - int32(rocks[i].size)) * 10
-				b.health = 0
-				if rocks[i].size > 4 {
-					// make two more rocks
-					newRocks = append(newRocks, makeRock(rocks[i].pos.X+6, rocks[i].pos.Y-6, rocks[i].size/2))
-					newRocks = append(newRocks, makeRock(rocks[i].pos.X-6, rocks[i].pos.Y+6, rocks[i].size/2))
+
+			// bullets
+			for b := bullets.Front(); b != nil; b = b.Next() {
+				v := b.Value.(*Object)
+				if v.Health == 0 {
+					continue
 				}
-
-			}
+				dx = rockx - v.Pos.X
+				dy = rocky - v.Pos.Y
+				if dx*dx+dy*dy < rocks[i].size {
+					// hit!
+					// remove bullet, rock and increment score
+					rocks[i].Health = 0
+					score += (16 - int32(rocks[i].size)) * 10
+					v.Health = 0
+					if rocks[i].size > 4 {
+						// make two more rocks
+						newRocks = append(newRocks, makeRock(rocks[i].Pos.X+6, rocks[i].Pos.Y-6, rocks[i].size/2))
+						newRocks = append(newRocks, makeRock(rocks[i].Pos.X-6, rocks[i].Pos.Y+6, rocks[i].size/2))
+					}
+				}
+			} // end bullets loop
 		}
-
-	}
-	if len(rocks) > 1 && rocks[0].health == 0 {
+	} // end rocks loop
+	// purge rocks
+	if len(rocks) > 1 && rocks[0].Health == 0 {
 		rocks = rocks[1:]
 	}
+	// add any new rocks
 	if len(newRocks) > 1 {
 		rocks = append(rocks, newRocks...)
+	}
+	// add two rocks if all rocks destroyed
+	if len(rocks) == 0 {
+		score += 1000
+		rocks = append(rocks, makeRock(Wrap(ship.Pos.X+blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
+		rocks = append(rocks, makeRock(Wrap(ship.Pos.X-blocksw/2, 0, blocksw), rand.Float64()*blocksh, 16))
 	}
 
 	// rotate scale and translate
@@ -255,7 +269,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	// draw ///////////////////////////////////////////////////
 	c.SetDrawColor(SADDLEBROWN)
 	for _, r := range rocks {
-		if r.health > 0 {
+		if r.Health > 0 {
 			r.draw(c)
 		}
 	}
@@ -264,9 +278,10 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	ship.draw(c)
 
 	c.SetDrawColor(STEELBLUE)
-	for i := range bullets {
-		if bullets[i].health > 0 {
-			c.Point(bullets[i].pos.X, bullets[i].pos.Y)
+	for b := bullets.Front(); b != nil; b = b.Next() {
+		v := b.Value.(*Object)
+		if v.Health > 0 {
+			c.Point(v.Pos.X, v.Pos.Y)
 		}
 	}
 
