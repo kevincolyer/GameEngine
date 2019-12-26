@@ -421,6 +421,14 @@ func (c *Context) Point(x0, y0 float64) {
 	c.Renderer.FillRect(NewRect(x0*c.Blocks, y0*c.Blocks, c.Blocks, c.Blocks))
 }
 
+// Draws a point (blocks)
+func (c *Context) PointScale(x0, y0, scale float64) {
+	// if c.screenXYtransform != nil {
+	// 	x0, y0 = c.screenXYtransform(x0, y0)
+	// }
+	c.Renderer.FillRect(NewRect(x0*c.Blocks/scale, y0*c.Blocks/scale, c.Blocks/scale, c.Blocks/scale))
+}
+
 // calculates the elapsed time between updates
 func (c *Context) Elapsed() float64 {
 	t := time.Now()

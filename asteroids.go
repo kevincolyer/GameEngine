@@ -1,15 +1,19 @@
 package main
 
 import (
-	"flag"
+	// "flag"
 	"fmt"
-	"log"
+	// "log"
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
-	"runtime/pprof"
+	// "runtime"
+	// "runtime/pprof"
+	// _ "net/http/pprof"
+	// "net/http"
+	"github.com/pbnjay/pixfont"
 
+	"image/color"
 	. "github.com/kevincolyer/GameEngine/GameEngine"
 )
 
@@ -21,25 +25,10 @@ func wrapScreen(x, y float64) (float64, float64) {
 var blocksw, blocksh, blocks float64
 var WHITE, BLACK, RED, GREEN, BLUE, GREY50 Colour
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+// var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+// var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 func main() {
-	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
-		}
-		defer f.Close()
-		fmt.Println("writing cpu profile to ", *cpuprofile)
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
-		}
-
-	}
-	defer pprof.StopCPUProfile()
-	// end profiling setup code
 
 	blocksw = 160
 	blocksh = 80
@@ -60,33 +49,32 @@ func main() {
 		running = onUpdate(ctx, ctx.Elapsed())
 	}
 
-	// profiling code
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			log.Fatal("could not create memory profile: ", err)
-		}
-		defer f.Close()
-		runtime.GC() // get up-to-date statistics
-		fmt.Println("writing memory profile to ", *memprofile)
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			log.Fatal("could not write memory profile: ", err)
-		}
-	}
 	ctx.Destroy()
 	os.Exit(0)
 }
 
+// bad memory leak doing it this way... (need to update texture not throw away!)
 func drawScore(c *Context, score int32) {
 	t := c.NewText(fmt.Sprintf("Score:%v", score), Colour{R: 255, G: 255, B: 255, A: 255})
 	t.Draw(c.Renderer, 0, 0, 0, 0)
 }
 
 func drawFPS(c *Context, elapsed float64) {
-	t := c.NewText(fmt.Sprintf("FPS:%d", int(1000/elapsed)), Colour{R: 255, G: 255, B: 255, A: 255})
+	t := c.NewText(fmt.Sprintf("FPS:%d", int(1/elapsed)), Colour{R: 255, G: 255, B: 255, A: 255})
 	t.Draw(c.Renderer, c.WinWidth-t.W, 0, 0, 0)
 }
 
+func drawText(c *Context,x,y,scale float64,text string) {
+	pixfonttest:= &pixfont.StringDrawable{}
+	pixfont.DrawString(pixfonttest, 00, 00, text, color.White)
+	x1:=x
+	y1:=y
+	for _,i:= range []byte(pixfonttest.String()) {
+		if i==10 { y1++; x1=x; continue}
+		if i=='X' { c.PointScale(x1,y1,scale) }
+		x1++
+	}
+}
 type object struct {
 	pos    P2D
 	vel    V2D
@@ -139,6 +127,7 @@ var rocks []object
 
 func onCreate(c *Context) {
 	fmt.Println("Created")
+	
 	c.Clear()
 	c.Present()
 	resetGame()
@@ -240,21 +229,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		rocks[i].ScaleRotateTranslate()
 	}
 
-	// // rotate
-	// for i := range ship.w {
-	// 	ship.w[i].X=math.Cos(ship.angle)*ship.model[i].X-math.Sin(ship.angle)*ship.model[i].Y
-	// 	ship.w[i].Y=math.Sin(ship.angle)*ship.model[i].X+math.Cos(ship.angle)*ship.model[i].Y
-	// }
-	// // scale
-	// for i := range ship.w {
-	// 	ship.w[i].X=ship.w[i].X*ship.size
-	// 	ship.w[i].Y=ship.w[i].Y*ship.size
-	// }
-	// // translate
-	// for i := range ship.w {
-	// 	ship.w[i].X+=ship.pos.X
-	// 	ship.w[i].Y+=ship.pos.Y
-	// }
+	// rotate scale and translate
 	ship.ScaleRotateTranslate()
 
 	// draw
@@ -272,8 +247,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		}
 	}
 
-	drawScore(c, score)
-	//drawFPS(c,elapsed)
+	drawText(c,0,0,2, fmt.Sprintf("score:%v",score))
+	score++
+	drawText(c,0,16,4,fmt.Sprintf("fps:%d", int(100/elapsed)))
 	// boilerplate to finish
 	c.Present()
 	Delay(1)
