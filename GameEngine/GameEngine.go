@@ -2,33 +2,36 @@ package GameEngine
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"math/rand"
 	"os"
 	"time"
 
+	"github.com/pbnjay/pixfont"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
+	//"github.com/veandco/go-sdl2/ttf"
 )
 
-const (
-	fontPath = "GameEngine/OpenSans-Regular.ttf"
-	fontSize = 32
-)
+// const (
+// 	fontPath = "GameEngine/OpenSans-Regular.ttf"
+// 	fontSize = 32
+// )
 
 type TransformFunc func(x, y float64) (float64, float64)
 
 type Context struct {
-	WindowTitle       string
-	WinWidth          float64
-	WinHeight         float64
-	Window            *sdl.Window
-	Renderer          *sdl.Renderer
-	Blocks            float64
-	ScrnWidth         float64
-	ScrnHeight        float64
-	lastTick          time.Time
-	font              *ttf.Font
+	WindowTitle string
+	WinWidth    float64
+	WinHeight   float64
+	Window      *sdl.Window
+	Renderer    *sdl.Renderer
+	Blocks      float64
+	ScrnWidth   float64
+	ScrnHeight  float64
+	lastTick    time.Time
+	// font              *ttf.Font
 	screenXYtransform TransformFunc
 }
 
@@ -59,15 +62,15 @@ func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 		fmt.Fprintf(os.Stderr, "Failed to create renderer: %s\n", err)
 		os.Exit(2)
 	}
-	// Font init
-	if err = ttf.Init(); err != nil {
-		println("Font initialisation failed", err)
-		os.Exit(3)
-	}
-	if ctx.font, err = ttf.OpenFont(fontPath, fontSize); err != nil {
-		println("Failed to load font", fontPath, err)
-		os.Exit(4)
-	}
+	// // Font init
+	// if err = ttf.Init(); err != nil {
+	// 	println("Font initialisation failed", err)
+	// 	os.Exit(3)
+	// }
+	// if ctx.font, err = ttf.OpenFont(fontPath, fontSize); err != nil {
+	// 	println("Failed to load font", fontPath, err)
+	// 	os.Exit(4)
+	// }
 
 	return &ctx
 }
@@ -76,7 +79,7 @@ func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 func (c *Context) Destroy() {
 	c.Window.Destroy()
 	c.Renderer.Destroy()
-	c.font.Close()
+	// c.font.Close()
 	ttf.Quit()
 }
 
@@ -102,113 +105,130 @@ type TextTexture struct {
 	W       float64
 	H       float64
 }
-func NewSdlColor(r, g, b, a float64) sdl.Color {
-    return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
-}
 
+func NewSdlColor(r, g, b, a float64) sdl.Color {
+	return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
+}
 
 type Colour struct {
-    R float64
-    G float64
-    B float64
-    A float64
+	R float64
+	G float64
+	B float64
+	A float64
 }
-func NewColour(r,g,b,a float64) Colour {
-	return Colour{r,g,b,a}
+
+func NewColour(r, g, b, a float64) Colour {
+	return Colour{r, g, b, a}
 }
 
 const PI = 3.141592
+
 // fades a colour by a percentage
 func (c Colour) Fade(percent float64) Colour {
-    percent=Clamp01(percent) // just to keep things sane!
-    return Colour{R: c.R*percent, G: c.G*percent, B: c.B*percent, A: c.A}
+	percent = Clamp01(percent) // just to keep things sane!
+	return Colour{R: c.R * percent, G: c.G * percent, B: c.B * percent, A: c.A}
 }
 
 func (c Colour) ToSDLColor() sdl.Color {
-    return NewSdlColor(c.R,c.G,c.B,c.A)
+	return NewSdlColor(c.R, c.G, c.B, c.A)
 }
 
-func (c Colour) Unpack() (uint8,uint8,uint8,uint8) {
-	return uint8(c.R),uint8(c.G),uint8(c.B),uint8(c.A) 
+func (c Colour) Unpack() (uint8, uint8, uint8, uint8) {
+	return uint8(c.R), uint8(c.G), uint8(c.B), uint8(c.A)
 }
-
 
 type V2D struct {
-    Dx float64
-    Dy float64
+	Dx float64
+	Dy float64
 }
 
 type P2D struct {
-    X float64
-    Y float64
-//    Z float64 // for depth buffering
+	X float64
+	Y float64
+	//    Z float64 // for depth buffering
 }
-
 
 type zbuffer struct {
-    buf [][]float64
-    w int
-    h int
+	buf [][]float64
+	w   int
+	h   int
 }
 
-const  NEGINF float64  = -1000000
+const NEGINF float64 = -1000000
 
 // Clears zbuffer
 func (z *zbuffer) Clear() {
-    for x:=0;x<z.w;x++ {
-        for y:=0;y<z.h;y++ {
-            z.buf[x][y]=NEGINF
-        }
-    }
+	for x := 0; x < z.w; x++ {
+		for y := 0; y < z.h; y++ {
+			z.buf[x][y] = NEGINF
+		}
+	}
 }
 
 // sets z buffer to depth z if is nearer than prev val. Returns true or false
-func (zb *zbuffer) SetIfNearer(x,y,z float64) bool {
-    // nearer is > then NEGINF
-    if zb.buf[int(x)][int(y)]>z {
-        zb.buf[int(x)][int(y)]=z
-        return true
-    }
-    return false
+func (zb *zbuffer) SetIfNearer(x, y, z float64) bool {
+	// nearer is > then NEGINF
+	if zb.buf[int(x)][int(y)] > z {
+		zb.buf[int(x)][int(y)] = z
+		return true
+	}
+	return false
 }
 
-func NewZbuffer(w,h float64) *zbuffer {
-    z := &zbuffer{
-		buf: make( [][]float64, int(w), int(h) ) ,
-        w: int(w),
-        h: int(h),
-    }
-    z.Clear()
-    return z 
+func NewZbuffer(w, h float64) *zbuffer {
+	z := &zbuffer{
+		buf: make([][]float64, int(w), int(h)),
+		w:   int(w),
+		h:   int(h),
+	}
+	z.Clear()
+	return z
 }
 
 // New texture for text display. Use .Draw to paint
-func (c *Context) NewText(stringToDisplay string, clr Colour ) (t *TextTexture) {
-	t = &TextTexture{}
-	var err error
-	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, clr.ToSDLColor()); err != nil {
-		panic("can't render font to buffer")
-	}
-	t.texture, err = c.Renderer.CreateTextureFromSurface(t.surface)
-	t.H = float64(t.surface.H)
-	t.W = float64(t.surface.W)
-	t.surface.Free()
-	return t
-}
+// func (c *Context) NewText(stringToDisplay string, clr Colour ) (t *TextTexture) {
+// 	t = &TextTexture{}
+// 	var err error
+// 	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, clr.ToSDLColor()); err != nil {
+// 		panic("can't render font to buffer")
+// 	}
+// 	t.texture, err = c.Renderer.CreateTextureFromSurface(t.surface)
+// 	t.H = float64(t.surface.H)
+// 	t.W = float64(t.surface.W)
+// 	t.surface.Free()
+// 	return t
+// }
 
-// Draws TextTexture to renderer at x,y with optional w,h (default to full w,h)
-func (t *TextTexture) Draw(r *sdl.Renderer, x, y, w, h float64) {
-	if w == 0 {
-		w = t.W
-	}
-	if h == 0 {
-		h = t.H
-	}
+// // Draws TextTexture to renderer at x,y with optional w,h (default to full w,h)
+// func (t *TextTexture) Draw(r *sdl.Renderer, x, y, w, h float64) {
+// 	if w == 0 {
+// 		w = t.W
+// 	}
+// 	if h == 0 {
+// 		h = t.H
+// 	}
 
-	d := NewRect(x, y, w, h)
-	s := NewRect(0, 0, w, h)
-	// Draw the text around the center of the window
-	r.Copy(t.texture, s, d)
+// 	d := NewRect(x, y, w, h)
+// 	s := NewRect(0, 0, w, h)
+// 	// Draw the text around the center of the window
+// 	r.Copy(t.texture, s, d)
+// }
+func (c *Context) DrawText(x, y, scale float64, text string) {
+	pixfonttest := &pixfont.StringDrawable{}
+	pixfont.DrawString(pixfonttest, 00, 00, text, color.White)
+	x1 := x
+	y1 := y
+	for _, i := range []byte(pixfonttest.String()) {
+		if i == 10 {
+			y1++
+			x1 = x
+			continue
+		}
+		if i == 'X' {
+			c.PointScale(x1, y1, scale)
+		}
+		x1++
+	}
 }
 
 // returns number wraped around a low and hi boundary
@@ -437,11 +457,15 @@ func (c *Context) Elapsed() float64 {
 	if elapsed == 0 {
 		elapsed++
 	}
-	return elapsed / (1000*1000 *10)
+	return elapsed / (1000 * 1000 * 10)
 }
 
 func Sign(s float64) float64 {
-	if s==0 { return 0 }
-	if s<0 {return -1 }
+	if s == 0 {
+		return 0
+	}
+	if s < 0 {
+		return -1
+	}
 	return 1
 }
