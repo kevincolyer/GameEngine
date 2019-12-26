@@ -18,6 +18,7 @@ func wrapScreen(x, y float64) (float64, float64) {
 
 var blocksw, blocksh, blocks float64
 var WHITE, BLACK, RED, GREEN, BLUE, GREY50, DARKRED, SADDLEBROWN, STEELBLUE Colour
+var explodeShip bool
 
 var fps = flag.Bool("fps", false, "Display Frames per second")
 var blocksi = flag.Int("blocks", 8, "Blocks of X pixels")
@@ -126,6 +127,7 @@ func resetGame() {
 		hiscore = score
 	}
 	score = 0
+	explodeShip = false
 	bullets.Init()
 	rocks.Init()
 	rocks.PushBack(makeRock(blocksw/4, blocksh/2, 16))
@@ -143,6 +145,14 @@ func makeRock(x, y float64, size float64) (rock *Object) {
 	rock.W = append(rock.W, rock.Model...)
 	rock.Vel = V2D{(rand.Float64() - 0.5) * math.Sin(rock.Angle), -(rand.Float64() - 0.5) * math.Cos(rock.Angle)}
 	return
+}
+
+func drawExplosion() {
+	resetGame()
+}
+
+func makeExplosion(c *Context) {
+
 }
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
@@ -219,7 +229,8 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			dx := rockx - ship.Pos.X
 			dy := rocky - ship.Pos.Y
 			if dx*dx+dy*dy < 1+rock.size*rock.size {
-				resetGame()
+				explodeShip = true
+				//				resetGame()
 			}
 
 			// bullets
@@ -266,9 +277,12 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			rock.Draw(c)
 		}
 	}
-
-	c.SetDrawColor(WHITE)
-	ship.Draw(c)
+	if explodeShip == false {
+		c.SetDrawColor(WHITE)
+		ship.Draw(c)
+	} else {
+		drawExplosion()
+	}
 
 	c.SetDrawColor(STEELBLUE)
 	for b := bullets.Front(); b != nil; b = b.Next() {
