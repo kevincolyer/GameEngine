@@ -16,13 +16,14 @@ var fps = flag.Bool("fps", false, "Display Frames per second")
 var blocksi = flag.Int("blocks", 8, "Blocks of X pixels")
 
 var x, y, z, angle float64
+var comment string
 
 const ww = 10
 const wh = 20
 
 var world [wh][ww]int
 
-const horizon float64 = 20
+const horizon float64 = 15
 const screenz float64 = 0.5 // for now...
 
 func main() {
@@ -59,7 +60,7 @@ var worldSpeed float64
 var distScreen = 0.5
 
 func onCreate(c *Context) {
-	worldSpeed = 0.05
+	worldSpeed = 0.1
 
 	c.Clear()
 	c.Present()
@@ -105,23 +106,43 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			running = false
 		}
 	}
+	comment = ""
 	// Update code here...
 	c.SetDrawColor(BLACK)
 	c.Clear()
 	// keys //////////////////////////////////////////
 	if keys.Key == "a" {
 		angle -= ews
+		if angle < 0 {
+			angle += PI * 2
+		}
 	}
 	if keys.Key == "d" {
 		angle += ews
+		if angle >= PI*2 {
+			angle -= PI * 2
+		}
 	}
 	if keys.Key == "w" {
-		x += math.Sin(angle) * ews
-		y -= math.Cos(angle) * ews
+		nx := x + math.Sin(angle)*ews
+		ny := y - math.Cos(angle)*ews
+		if world[int(ny)][int(nx)] != 1 {
+			x = nx
+			y = ny
+		} else {
+			comment = "BUMP! Ooops"
+		}
+
 	}
 	if keys.Key == "s" {
-		x -= math.Sin(angle) * ews
-		y += math.Cos(angle) * ews
+		nx := x - math.Sin(angle)*ews
+		ny := y + math.Cos(angle)*ews
+		if world[int(ny)][int(nx)] != 1 {
+			x = nx
+			y = ny
+		} else {
+			comment = "BUMP! Ooops"
+		}
 	}
 	if keys.Key == " " {
 	}
@@ -138,27 +159,31 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		// z is distance to hitting a block. give up at horizon
 		// z = math.Sqrt(screenz*screenz + (bx-screenmidw)*(bx-screenmidw))
 		z = screenz
+		var tx, ty float64
+		hitWall := false
 		for z < horizon {
 			z += 0.01
-			tx := x + math.Sin(a)*z
-			ty := y - math.Cos(a)*z
+			tx = x + math.Sin(a)*z
+			ty = y - math.Cos(a)*z
 			if tx >= ww || tx < 0 || ty >= wh || ty < 0 {
 				z = horizon
 				break
 			}
 			if world[int(ty)][int(tx)] == 1 {
 				// hit a wall
-
+				hitWall = true
 				break
 			}
 		}
+		// if hit wall check if hit corner...
+
 		// draw from top to bottom
 		wallt := math.Trunc(screenmid - (screenmid / z))
 		wallb := math.Trunc(blocksh - wallt)
 		c.SetDrawColor(BLACK)
 		for by := 0.0; by < blocksh; by++ {
 			if by >= wallt && by < wallb {
-				c.SetDrawColor(GREY50.Fade(1.5 / z))
+				c.SetDrawColor(WHITE.Fade(1.5 / z))
 			}
 			if by >= wallb {
 				c.SetDrawColor(RED.Fade(1 - (blocksh-by)/screenmid))
@@ -168,11 +193,11 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	}
 
 	// Draw text and 'top' layers
-	c.SetDrawColor(WHITE)
+	c.SetDrawColor(STEELBLUE)
 	if *fps {
 		c.DrawText(1, 17, 4, fmt.Sprintf("fps:%d", int(100/elapsed)))
 	}
-	c.DrawText(0, 0, 4, fmt.Sprintf("x: %v y: %v a: %v", x, y, angle))
+	c.DrawText(0, 0, 4, fmt.Sprintf("x: %.2f y: %.2f a: %.2f     %v", x, y, angle, comment))
 	// boilerplate to finish
 	c.Present()
 	Delay(1)
