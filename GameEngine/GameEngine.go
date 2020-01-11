@@ -2,7 +2,9 @@ package GameEngine
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	"image/png"
 	"math"
 	"math/rand"
 	"os"
@@ -472,4 +474,87 @@ func Sign(s float64) float64 {
 		return -1
 	}
 	return 1
+}
+
+type Sprite struct {
+	image.Image
+	w float64
+	h float64
+}
+
+func NewSprite(filename string) (s *Sprite, err error) {
+	infile, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer infile.Close()
+
+	// Decode will figure out what type of image is in the file on its own.
+	// We just have to be sure all the image packages we want are imported.
+	i, err := png.Decode(infile)
+	if err != nil {
+		return
+	}
+	bounds:=i.Bounds()
+	s = &Sprite{i,float64(bounds.Max.X-bounds.Min.X), float64(bounds.Max.Y-bounds.Min.Y)}
+	return
+}
+
+func (s *Sprite) DrawSprite(c *Context, x, y float64) {
+	for i := 0.0; i < s.w ; i++ {
+		for j := 0.0; j < s.h; j++ {
+			r, g, b, a := s.At(int(i), int(j)).RGBA()
+			// no blending for now!
+			if a > 0 {
+				c.Renderer.SetDrawColor(uint8(r), uint8(g), uint8(b), uint8(a))
+				c.Point(x+i, y+j)
+			}
+		}
+	}
+}
+func (s *Sprite) DrawPartialSprite(c *Context, x, y, ox, oy, w, h float64) {
+	for i := ox; i < ox+w; i++ {
+		for j := oy; j < oy+h; j++ {
+			r, g, b, a := s.At(int(i), int(j)).RGBA()
+			// no blending for now!
+			if a > 0 {
+				c.Renderer.SetDrawColor(uint8(r), uint8(g), uint8(b), uint8(a))
+				c.Point(x+i-ox, y+j-oy)
+			}
+		}
+	}
+}
+
+func (s *Sprite) SampleSprite(nx, ny float64) (rgba Colour) {
+	bounds := s.Bounds()
+	x := int(nx * float64(bounds.Max.X-bounds.Min.X))
+	y := int(ny * float64(bounds.Max.Y-bounds.Min.Y))
+	r, g, b, a := s.At(x, y).RGBA()
+	rgba = NewColour(float64(r), float64(g), float64(b), float64(a))
+	return
+}
+
+type SpriteSheet struct {
+    Sheet *Sprite
+    SpritesPerRow float64
+    SpritesPerCol float64
+    SpriteW float64
+    SpriteH float64
+}
+
+func NewSpriteSheet(filename string, NumPerRow, NumPerCol float64) (sh *SpriteSheet, err error) {
+    sh = &SpriteSheet{SpritesPerRow: NumPerRow, SpritesPerCol: NumPerCol}
+    sh.Sheet, err = NewSprite(filename)
+    if err!=nil {
+        return nil, err
+    }
+    sh.SpriteW=sh.Sheet.w/sh.SpritesPerCol
+    sh.SpriteH=sh.Sheet.h/sh.SpritesPerRow
+    return 
+}
+
+func (s *SpriteSheet) DrawSpriteFromSheet(c *Context,x,y,row,col float64) {
+    ox:=col*s.SpriteW
+    oy:=row*s.SpriteH
+    s.Sheet.DrawPartialSprite(c,x,y,ox,oy,s.SpriteW,s.SpriteH)
 }
