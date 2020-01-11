@@ -24,7 +24,6 @@ func main() {
 	for running {
 		running = onUpdate(ctx, ctx.Elapsed())
 	}
-    
 
 	ctx.Destroy()
 	os.Exit(0)
@@ -50,19 +49,21 @@ func onCreate(c *Context) {
 	blocksh = c.ScrnHeight
 	c.Clear()
 	c.Present()
-    coin,err=NewSprite("GameEngine/coin2.png")
-    if err!=nil {
-        panic(err)
-    }
-    dungeon,err=NewSpriteSheet("GameEngine/set-cave_bright.png",10,2)
-    if err!=nil {
-        panic(err)
-    }
+	coin, err = NewSprite("GameEngine/coin2.png")
+	if err != nil {
+		panic(err)
+	}
+	dungeon, err = NewSpriteSheet("GameEngine/set-cave_bright.png", 10, 2)
+	if err != nil {
+		panic(err)
+	}
 }
+
+var tick float64
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	var oldLx, oldLy, nx, ny float64
-
+	tick += elapsed
 	x += dx * elapsed
 	y += dy * elapsed
 	x = Wrap(x, 0, c.WinWidth)
@@ -89,13 +90,13 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	c.DrawText(1, 1, 2, "Hello Mum!")
 	c.DrawText(1, 20, 1, "Hello Mum!")
 
-    coinx=x/blocks
-    coiny=y/blocks
-    coin.DrawSprite(c,coinx,coiny)
-    coin.DrawPartialSprite(c,coinx+20,coiny,8,8,4,4)
-    dungeon.DrawSpriteFromSheet(c,x,y+20,0,0)
-    dungeon.DrawSpriteFromSheet(c,x+20,y+40,9,1)
-    
+	coinx = x / blocks
+	coiny = y / blocks
+	coin.DrawSprite(c, coinx, coiny)
+	coin.DrawPartialSprite(c, coinx+20, coiny, 8, 8, 4, 4)
+	dungeon.DrawSpriteFromSheet(c, coinx, coiny+20, 0, 0)
+	dungeon.DrawSpriteFromSheetI(c, coinx+20, coiny+40, tick)
+
 	c.Present()
 	Delay(1)
 	running, keys := c.PollQuitandKeys()

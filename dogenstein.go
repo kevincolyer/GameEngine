@@ -176,6 +176,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			}
 		}
 		// if hit wall check if hit corner...
+		if hitWall {
+
+		}
 
 		// draw from top to bottom
 		wallt := math.Trunc(screenmid - (screenmid / z))
