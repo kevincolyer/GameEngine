@@ -58,6 +58,7 @@ const FOV float64 = PI / 2
 
 var worldSpeed float64
 var distScreen = 0.5
+var commentTicker = 0.0
 
 func onCreate(c *Context) {
 	worldSpeed = 0.1
@@ -106,7 +107,10 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			running = false
 		}
 	}
-	comment = ""
+	if commentTicker < 0 {
+		comment = ""
+	}
+	commentTicker -= elapsed
 	// Update code here...
 	c.SetDrawColor(BLACK)
 	c.Clear()
@@ -131,6 +135,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			y = ny
 		} else {
 			comment = "BUMP! Ooops"
+			commentTicker = 20.0
 		}
 
 	}
@@ -142,6 +147,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			y = ny
 		} else {
 			comment = "BUMP! Ooops"
+			commentTicker = 20.0
 		}
 	}
 	if keys.Key == " " {

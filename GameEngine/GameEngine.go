@@ -16,32 +16,27 @@ import (
 	//"github.com/veandco/go-sdl2/ttf"
 )
 
-// const (
-// 	fontPath = "GameEngine/OpenSans-Regular.ttf"
-// 	fontSize = 32
-// )
-
+// TransformFunc ... type of function to modify Point drawing
 type TransformFunc func(x, y float64) (float64, float64)
 
+// Context ... contains context object for game engine
 type Context struct {
-	WindowTitle string
-	WinWidth    float64
-	WinHeight   float64
-	Window      *sdl.Window
-	Renderer    *sdl.Renderer
-	Blocks      float64
-	ScrnWidth   float64
-	ScrnHeight  float64
-	lastTick    time.Time
-	// font              *ttf.Font
+	WindowTitle       string
+	WinWidth          float64
+	WinHeight         float64
+	Window            *sdl.Window
+	Renderer          *sdl.Renderer
+	Blocks            float64
+	ScrnWidth         float64
+	ScrnHeight        float64
+	lastTick          time.Time
 	screenXYtransform TransformFunc
 }
 
-var ctx Context
-
+// New ... create the GameEngine and initialises
 func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 	fmt.Println("starting Game engine")
-	ctx = Context{
+	ctx := Context{
 		Blocks:            b,
 		ScrnWidth:         sw,
 		ScrnHeight:        sh,
@@ -64,20 +59,11 @@ func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 		fmt.Fprintf(os.Stderr, "Failed to create renderer: %s\n", err)
 		os.Exit(2)
 	}
-	// // Font init
-	// if err = ttf.Init(); err != nil {
-	// 	println("Font initialisation failed", err)
-	// 	os.Exit(3)
-	// }
-	// if ctx.font, err = ttf.OpenFont(fontPath, fontSize); err != nil {
-	// 	println("Failed to load font", fontPath, err)
-	// 	os.Exit(4)
-	// }
 
 	return &ctx
 }
 
-// cleans up window and renderer
+// Destroy ... cleans up window and renderer
 func (c *Context) Destroy() {
 	c.Window.Destroy()
 	c.Renderer.Destroy()
@@ -85,7 +71,7 @@ func (c *Context) Destroy() {
 	ttf.Quit()
 }
 
-// helper function to build and SDL rectangle from float64's
+// NewRect ... helper function to build and SDL rectangle from float64's
 func NewRect(x, y, w, h float64) *sdl.Rect {
 	return &sdl.Rect{int32(x), int32(y), int32(w), int32(h)}
 }
@@ -95,20 +81,12 @@ func Delay(s uint32) {
 	sdl.Delay(s)
 }
 
-// rand intn for sdl
+// RandIntN ... rand intn for sdl
 func RandIntN(i float64) float64 {
 	return float64(rand.Intn(int(i)))
 }
 
-// Holds rendering information for displaying ttf to a texture for renderer
-type TextTexture struct {
-	surface *sdl.Surface
-	texture *sdl.Texture
-	W       float64
-	H       float64
-}
-
-// NewSdlColor takes floats and returs an sdl suitalbe color object
+// NewSdlColor ... takes floats and returs an sdl suitalbe color object
 func NewSdlColor(r, g, b, a float64) sdl.Color {
 	return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
 }
@@ -135,54 +113,56 @@ func (c Colour) Fade(normalised float64) Colour {
 	return Colour{R: c.R * normalised, G: c.G * normalised, B: c.B * normalised, A: c.A}
 }
 
+// ToSDLColor ... returns a sdl.Color struct from a Colour struct
 func (c Colour) ToSDLColor() sdl.Color {
 	return NewSdlColor(c.R, c.G, c.B, c.A)
 }
 
+// Unpack ... transforms Colour struct to 4 uint8 values
 func (c Colour) Unpack() (uint8, uint8, uint8, uint8) {
 	return uint8(c.R), uint8(c.G), uint8(c.B), uint8(c.A)
 }
 
+// V2D ... struct for holding a 2D vector
 type V2D struct {
 	Dx float64
 	Dy float64
 }
 
+// V3D ... struct for holding a 2D vector
+type V3D struct {
+	DX float64
+	DY float64
+	DZ float64
+}
+
+// P2D ... Struct for holding a 2D point
 type P2D struct {
 	X float64
 	Y float64
-	//    Z float64 // for depth buffering
+	// for depth buffering?
 }
 
-type zbuffer struct {
+// P3D ... Struct for holding a 3D point
+type P3D struct {
+	X float64
+	Y float64
+	Z float64
+}
+
+// ZBuffer struct
+type ZBuffer struct {
 	buf [][]float64
 	w   int
 	h   int
 }
 
+// NEGINF ... helper const = -1_000_000
 const NEGINF float64 = -1000000
 
-// Clears zbuffer
-func (z *zbuffer) Clear() {
-	for x := 0; x < z.w; x++ {
-		for y := 0; y < z.h; y++ {
-			z.buf[x][y] = NEGINF
-		}
-	}
-}
-
-// sets z buffer to depth z if is nearer than prev val. Returns true or false
-func (zb *zbuffer) SetIfNearer(x, y, z float64) bool {
-	// nearer is > then NEGINF
-	if zb.buf[int(x)][int(y)] > z {
-		zb.buf[int(x)][int(y)] = z
-		return true
-	}
-	return false
-}
-
-func NewZbuffer(w, h float64) *zbuffer {
-	z := &zbuffer{
+// NewZBuffer returns a pointer to a initilised and cleared z buffer
+func NewZBuffer(w, h float64) *ZBuffer {
+	z := &ZBuffer{
 		buf: make([][]float64, int(w), int(h)),
 		w:   int(w),
 		h:   int(h),
@@ -191,34 +171,26 @@ func NewZbuffer(w, h float64) *zbuffer {
 	return z
 }
 
-// New texture for text display. Use .Draw to paint
-// func (c *Context) NewText(stringToDisplay string, clr Colour ) (t *TextTexture) {
-// 	t = &TextTexture{}
-// 	var err error
-// 	if t.surface, err = c.font.RenderUTF8Blended(stringToDisplay, clr.ToSDLColor()); err != nil {
-// 		panic("can't render font to buffer")
-// 	}
-// 	t.texture, err = c.Renderer.CreateTextureFromSurface(t.surface)
-// 	t.H = float64(t.surface.H)
-// 	t.W = float64(t.surface.W)
-// 	t.surface.Free()
-// 	return t
-// }
+// Clear ... ZBuffer
+func (z *ZBuffer) Clear() {
+	for x := 0; x < z.w; x++ {
+		for y := 0; y < z.h; y++ {
+			z.buf[x][y] = NEGINF
+		}
+	}
+}
 
-// // Draws TextTexture to renderer at x,y with optional w,h (default to full w,h)
-// func (t *TextTexture) Draw(r *sdl.Renderer, x, y, w, h float64) {
-// 	if w == 0 {
-// 		w = t.W
-// 	}
-// 	if h == 0 {
-// 		h = t.H
-// 	}
+// SetIfNearer ... sets z buffer to depth d if is nearer than prev val. Returns true or false
+func (z *ZBuffer) SetIfNearer(x, y, d float64) bool {
+	// nearer is > then NEGINF
+	if z.buf[int(x)][int(y)] > d {
+		z.buf[int(x)][int(y)] = d
+		return true
+	}
+	return false
+}
 
-// 	d := NewRect(x, y, w, h)
-// 	s := NewRect(0, 0, w, h)
-// 	// Draw the text around the center of the window
-// 	r.Copy(t.texture, s, d)
-// }
+// DrawText to screen with a scaling factor to reduce
 func (c *Context) DrawText(x, y, scale float64, text string) {
 	pixfonttest := &pixfont.StringDrawable{}
 	pixfont.DrawString(pixfonttest, 00, 00, text, color.White)
@@ -237,7 +209,7 @@ func (c *Context) DrawText(x, y, scale float64, text string) {
 	}
 }
 
-// returns number wraped around a low and hi boundary
+// Wrap ... returns number wraped around a low and hi boundary
 func Wrap(num, low, hi float64) float64 {
 	if num < low {
 		return hi - (low - num)
@@ -248,7 +220,7 @@ func Wrap(num, low, hi float64) float64 {
 	return num
 }
 
-// returns number clamped between low and hi
+// Clamp ... returns number clamped between low and hi
 func Clamp(num, low, hi float64) float64 {
 	if num < low {
 		return low
@@ -259,7 +231,7 @@ func Clamp(num, low, hi float64) float64 {
 	return num
 }
 
-// returns number clamped between 0 and 1
+// Clamp01 returns number clamped between 0 and 1
 func Clamp01(num float64) float64 {
 	if num < 0 {
 		return 0
@@ -270,12 +242,12 @@ func Clamp01(num float64) float64 {
 	return num
 }
 
-// random number 0-255
+// R256 random number 0-255
 func R256() float64 {
 	return float64(rand.Intn(256))
 }
 
-// line drawing (blocks)
+// Line drawing (blocks)
 func (c *Context) Line(x0, y0, x1, y1 float64) {
 	x0 = math.Round(x0)
 	x1 = math.Round(x1)
@@ -321,7 +293,7 @@ func (c *Context) Line(x0, y0, x1, y1 float64) {
 	}
 }
 
-// Draws outline Triangle (blocks)
+// Triangle Draws outline Triangle (blocks)
 func (c *Context) Triangle(x0, y0, x1, y1, x2, y2 float64) {
 
 	if x0 == x1 && x1 == x2 && y0 == y1 && y1 == y2 {
@@ -360,7 +332,7 @@ func (c *Context) Triangle(x0, y0, x1, y1, x2, y2 float64) {
 	}
 }
 
-// helper for Trinagle
+// helper for Triangle
 func (c *Context) bottomFlatTriangle(x1, y1, x2, y2, x3, y3 float64) {
 	// 	blocks:=int32(c.Blocks)
 
@@ -397,18 +369,18 @@ func (c *Context) Clear() {
 	c.Renderer.Clear()
 }
 
-// Render all to screen
+// Present ... Renders all to screen
 func (c *Context) Present() {
 	c.Renderer.Present()
 }
 
-// Set Drawing color
+// SetDrawColor for next use to Colour struct
 func (c *Context) SetDrawColor(rgba Colour) {
 	// color := &sdl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
 	c.Renderer.SetDrawColor(rgba.Unpack())
 }
 
-// Struct holding key status information
+// KeyStatus  ... Struct holding key status information
 type KeyStatus struct {
 	Key       string // key pressed as string
 	Pressed   bool
@@ -418,7 +390,7 @@ type KeyStatus struct {
 	Event     bool
 }
 
-// Poll quit and key events. Returns running=True and a Key struct
+// PollQuitandKeys ... checks for events. Returns running=True and a Key struct
 func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
 	running = true
 	keys.Event = false // unless something happens!
@@ -439,7 +411,7 @@ func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
 	return running, keys
 }
 
-// Draws a point (blocks)
+// Point ... Draws a blocky point transformed to screen with optional transform applied from func stored in Context
 func (c *Context) Point(x0, y0 float64) {
 	if c.screenXYtransform != nil {
 		x0, y0 = c.screenXYtransform(x0, y0)
@@ -447,15 +419,12 @@ func (c *Context) Point(x0, y0 float64) {
 	c.Renderer.FillRect(NewRect(x0*c.Blocks, y0*c.Blocks, c.Blocks, c.Blocks))
 }
 
-// Draws a point (blocks)
+// PointScale ... Draws a blocky point but scaled down by a factore (used mainly in text drawing) (blocks)
 func (c *Context) PointScale(x0, y0, scale float64) {
-	// if c.screenXYtransform != nil {
-	// 	x0, y0 = c.screenXYtransform(x0, y0)
-	// }
 	c.Renderer.FillRect(NewRect(x0*c.Blocks/scale, y0*c.Blocks/scale, c.Blocks/scale, c.Blocks/scale))
 }
 
-// calculates the elapsed time between updates
+// Elapsed ... calculates the elapsed time between updates
 func (c *Context) Elapsed() float64 {
 	t := time.Now()
 	elapsed := float64(t.Sub(c.lastTick))
@@ -466,6 +435,7 @@ func (c *Context) Elapsed() float64 {
 	return elapsed / (1000 * 1000 * 10)
 }
 
+// Sign ... helper func - returns sign of input as -1,0,1
 func Sign(s float64) float64 {
 	if s == 0 {
 		return 0
@@ -476,12 +446,14 @@ func Sign(s float64) float64 {
 	return 1
 }
 
+// Sprite struct
 type Sprite struct {
 	image.Image
-	w float64
-	h float64
+	W float64
+	H float64
 }
 
+// NewSprite ... loads and builds a new sprite given a filename. Returns pointer to sprite structure
 func NewSprite(filename string) (s *Sprite, err error) {
 	infile, err := os.Open(filename)
 	if err != nil {
@@ -495,14 +467,15 @@ func NewSprite(filename string) (s *Sprite, err error) {
 	if err != nil {
 		return
 	}
-	bounds:=i.Bounds()
-	s = &Sprite{i,float64(bounds.Max.X-bounds.Min.X), float64(bounds.Max.Y-bounds.Min.Y)}
+	bounds := i.Bounds()
+	s = &Sprite{i, float64(bounds.Max.X - bounds.Min.X), float64(bounds.Max.Y - bounds.Min.Y)}
 	return
 }
 
+// DrawSprite ... at x,y location
 func (s *Sprite) DrawSprite(c *Context, x, y float64) {
-	for i := 0.0; i < s.w ; i++ {
-		for j := 0.0; j < s.h; j++ {
+	for i := 0.0; i < s.W; i++ {
+		for j := 0.0; j < s.H; j++ {
 			r, g, b, a := s.At(int(i), int(j)).RGBA()
 			// no blending for now!
 			if a > 0 {
@@ -512,6 +485,8 @@ func (s *Sprite) DrawSprite(c *Context, x, y float64) {
 		}
 	}
 }
+
+// DrawPartialSprite ... draws a rectangle from a sprite at x,y given offset ox and oy into sprite size w, h. No bounds checking
 func (s *Sprite) DrawPartialSprite(c *Context, x, y, ox, oy, w, h float64) {
 	for i := ox; i < ox+w; i++ {
 		for j := oy; j < oy+h; j++ {
@@ -525,36 +500,52 @@ func (s *Sprite) DrawPartialSprite(c *Context, x, y, ox, oy, w, h float64) {
 	}
 }
 
+// SampleSprite ... Samples from normal x, y of sprite
 func (s *Sprite) SampleSprite(nx, ny float64) (rgba Colour) {
 	bounds := s.Bounds()
-	x := int(nx * float64(bounds.Max.X-bounds.Min.X))
-	y := int(ny * float64(bounds.Max.Y-bounds.Min.Y))
+	x := int(math.Trunc(nx * float64(bounds.Max.X-bounds.Min.X)))
+	y := int(math.Trunc(ny * float64(bounds.Max.Y-bounds.Min.Y)))
 	r, g, b, a := s.At(x, y).RGBA()
 	rgba = NewColour(float64(r), float64(g), float64(b), float64(a))
 	return
 }
 
+// SpriteSheet ...
 type SpriteSheet struct {
-    Sheet *Sprite
-    SpritesPerRow float64
-    SpritesPerCol float64
-    SpriteW float64
-    SpriteH float64
+	Sheet         *Sprite
+	SpritesPerRow float64
+	SpritesPerCol float64
+	SpriteW       float64
+	SpriteH       float64
 }
 
-func NewSpriteSheet(filename string, NumPerRow, NumPerCol float64) (sh *SpriteSheet, err error) {
-    sh = &SpriteSheet{SpritesPerRow: NumPerRow, SpritesPerCol: NumPerCol}
-    sh.Sheet, err = NewSprite(filename)
-    if err!=nil {
-        return nil, err
-    }
-    sh.SpriteW=sh.Sheet.w/sh.SpritesPerCol
-    sh.SpriteH=sh.Sheet.h/sh.SpritesPerRow
-    return 
+// NewSpriteSheet ...
+func NewSpriteSheet(filename string, NumPerCol, NumPerRow float64) (sh *SpriteSheet, err error) {
+	sh = &SpriteSheet{SpritesPerRow: NumPerRow, SpritesPerCol: NumPerCol}
+	sh.Sheet, err = NewSprite(filename)
+	if err != nil {
+		return nil, err
+	}
+	sh.SpriteW = sh.Sheet.W / sh.SpritesPerCol
+	sh.SpriteH = sh.Sheet.H / sh.SpritesPerRow
+	return
 }
 
-func (s *SpriteSheet) DrawSpriteFromSheet(c *Context,x,y,row,col float64) {
-    ox:=col*s.SpriteW
-    oy:=row*s.SpriteH
-    s.Sheet.DrawPartialSprite(c,x,y,ox,oy,s.SpriteW,s.SpriteH)
+// DrawSpriteFromSheet ... given x and y coord draws the sprite from row x col of spritesheet
+func (s *SpriteSheet) DrawSpriteFromSheet(c *Context, x, y, row, col float64) {
+	col = math.Mod(col, s.SpritesPerCol)
+	row = math.Mod(row, s.SpritesPerRow)
+	ox := col * s.SpriteW
+	oy := row * s.SpriteH
+	s.Sheet.DrawPartialSprite(c, x, y, ox, oy, s.SpriteW, s.SpriteH)
+}
+
+// DrawSpriteFromSheetI ... indexes spritesheet as linear array.
+func (s *SpriteSheet) DrawSpriteFromSheetI(c *Context, x, y, i float64) {
+	i = math.Trunc(math.Mod(i, s.SpritesPerCol*s.SpritesPerRow))
+	col := math.Mod(i, s.SpritesPerCol)
+	row := math.Trunc(i / s.SpritesPerCol)
+	ox := col * s.SpriteW
+	oy := row * s.SpriteH
+	s.Sheet.DrawPartialSprite(c, x, y, ox, oy, s.SpriteW, s.SpriteH)
 }
