@@ -11,8 +11,6 @@ func wrapScreen(x, y float64) (float64, float64) {
 	return Wrap(x, 0, blocksw), Wrap(y, 0, blocksh)
 }
 
-var coin *Sprite
-var dungeon *SpriteSheet
 var err error
 
 func main() {
@@ -30,6 +28,10 @@ func main() {
 }
 
 var blocksw, blocksh, blocks float64
+var rand *gnuRand
+var lastRandSeed uint32 = 0
+var BLACK = Colour{0, 0, 0, 255}
+var WHITE = Colour{255, 255, 255, 225}
 
 func onCreate(c *Context) {
 	blocks = c.Blocks
@@ -37,14 +39,9 @@ func onCreate(c *Context) {
 	blocksh = c.ScrnHeight
 	c.Clear()
 	c.Present()
+	rand = NewgnuRand(0)
+	lastRandSeed = rand.Seed(0)
 }
-
-var prng = "0"
-
-var BLACK = Colour{0, 0, 0, 255}
-var WHITE = Colour{255, 255, 255, 225}
-var lastProcGenSeed uint32 = 0
-var lastGnuRandSeed uint32 = 0
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	running, keys := c.PollQuitandKeys()
@@ -52,29 +49,18 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		if keys.Key == "q" {
 			running = false
 		}
-		if keys.Key >= "0" && keys.Key < "2" {
-			prng = keys.Key
-			fmt.Println(prng)
-		}
-		if keys.Key == " " {
-			lastGnuRandSeed = uint32(gnuRand() * 0x7FFFFFFF)
-			lastProcGenSeed = uint32(procGenRnd() * 0x7FFFFFFF)
+		if keys.Key == " " && keys.Released {
+			lastRandSeed = rand.Seed(rand.Rnd())
+			println(lastRandSeed)
 		}
 		fmt.Println("pressed ", keys.Key)
 	}
 	c.Clear()
-	nProcGen = lastProcGenSeed
-	gnuRandSeed = lastGnuRandSeed
+	lastRandSeed = rand.Seed(lastRandSeed)
 
 	for x := 0.0; x < blocksw; x++ {
 		for y := 0.0; y < blocksh; y++ {
-			star := false
-			if prng == "0" {
-				star = procGenRnd() < 0.15
-			}
-			if prng == "1" {
-				star = gnuRand() < 0.15
-			}
+			star := rand.Rand() < 0.15
 			if star {
 				c.SetDrawColor(WHITE)
 			} else {
@@ -89,22 +75,43 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	return running
 }
 
-// https://github.com/OneLoneCoder/olcPixelGameEngine/blob/master/Videos/OneLoneCoder_PGE_ProcGen_Universe.cpp
-var nProcGen uint32 = 0
 
-func procGenRnd() float32 {
-	nProcGen += 0xe120fc15
-	var tmp uint64 = uint64(nProcGen) * 0x4a39b70d
-	var m1 uint32 = uint32((tmp >> 32) ^ tmp)
-	tmp = uint64(m1) * 0x12fad5c9
-	var m2 uint32 = uint32((tmp >> 32) ^ tmp)
-	return float32(m2) / float32(0x7FFFFFFF)
+
+// gnuRand object pseudo random number generator - good for 32bits
+type gnuRand struct {
+	seed uint32
+	Size float32
 }
 
-var gnuRandSeed uint32 = 0
+// gnuRand constructor - pseudo random number generator - good for 32bits
+func NewgnuRand(s uint32) *gnuRand {
+	return &gnuRand{seed: uint32(s), Size: 0x7FFFFFFF}
+}
 
-// gnuRand ... pseudo random number generator - good for 32bits
-func gnuRand() float32 {
-	gnuRandSeed = gnuRandSeed*1103515245 + 12345
-	return float32(gnuRandSeed) / float32(0x7FFFFFFF)
+// gnuRand ... Seeds
+func (g *gnuRand) Seed(s uint32) uint32 {
+	g.seed = s
+	return g.seed
+}
+
+// Rnd integer fullrange 0 -> upper bound
+func (g *gnuRand) Rnd() uint32 {
+	g.seed = g.seed*1103515245 + 12345
+	return g.seed
+	//return float32(gnuRandSeed) / float32(0x7FFFFFFF)
+}
+
+// Rand float between 0 and 1
+func (g *gnuRand) Rand() float32 {
+	return float32(g.Rnd()) / g.Size
+}
+
+// Rand float between min and max (signed)
+func (g *gnuRand) RandF(min, max float32) float32 {
+	return g.Rand()/(max-min) + min
+}
+
+// Rand integer between min and max (signed)
+func (g *gnuRand) RandI(min, max int32) int32 {
+	return int32(g.Rnd())%(max-min) + min
 }
