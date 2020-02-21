@@ -152,7 +152,7 @@ type P3D struct {
 
 // ZBuffer struct
 type ZBuffer struct {
-	buf [][]float64
+	buf []float64
 	w   int
 	h   int
 }
@@ -163,7 +163,7 @@ const NEGINF float64 = -1000000
 // NewZBuffer returns a pointer to a initilised and cleared z buffer
 func NewZBuffer(w, h float64) *ZBuffer {
 	z := &ZBuffer{
-		buf: make([][]float64, int(w), int(h)),
+		buf: make([]float64, int(h)*int(w)),
 		w:   int(w),
 		h:   int(h),
 	}
@@ -173,18 +173,16 @@ func NewZBuffer(w, h float64) *ZBuffer {
 
 // Clear ... ZBuffer
 func (z *ZBuffer) Clear() {
-	for x := 0; x < z.w; x++ {
-		for y := 0; y < z.h; y++ {
-			z.buf[x][y] = NEGINF
-		}
+	for x := range z.buf {
+		z.buf[x] = NEGINF
 	}
 }
 
 // SetIfNearer ... sets z buffer to depth d if is nearer than prev val. Returns true or false
 func (z *ZBuffer) SetIfNearer(x, y, d float64) bool {
 	// nearer is > then NEGINF
-	if z.buf[int(x)][int(y)] > d {
-		z.buf[int(x)][int(y)] = d
+	if z.buf[int(x)+int(y)*z.w] < d {
+		z.buf[int(x)+int(y)*z.w] = d
 		return true
 	}
 	return false

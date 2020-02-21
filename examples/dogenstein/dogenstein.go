@@ -67,6 +67,8 @@ type spriteObject struct {
 
 var objects []spriteObject
 var bullets []spriteObject
+var depthbuffer *ZBuffer
+var zbuff []float64
 
 // GAME GLOBAL VARIABLES
 const FOV float64 = PI / 2
@@ -82,15 +84,15 @@ var blocksPerUnit = 10.0 // tunable parameter for changing the rayAngles
 
 func onCreate(c *Context) {
 	worldSpeed = 0.1
-	wall, err = NewSprite("GameEngine/wall.png")
+	wall, err = NewSprite("../../assets/wall.png")
 	if err != nil {
 		panic("couldn't load sprite")
 	}
-	lamp, err = NewSprite("GameEngine/lamppost.png")
+	lamp, err = NewSprite("../../assets/lamppost.png")
 	if err != nil {
 		panic("couldn't load sprite")
 	}
-	ball, err = NewSprite("GameEngine/tennisball.png")
+	ball, err = NewSprite("../../assets/tennisball.png")
 	if err != nil {
 		panic("couldn't load sprite")
 	}
@@ -110,12 +112,14 @@ func onCreate(c *Context) {
 	c.Clear()
 	c.Present()
 	resetGame()
+	depthbuffer = NewZBuffer(blocksw, 1)
+	zbuff = make([]float64, int(blocksw))
 }
 
 func resetGame() {
 	x = 3
 	y = 3
-	angle = PI / 4
+	angle = PI / 2
 	world = [wh][ww]int{ // y then x
 		[ww]int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		[ww]int{1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -151,13 +155,16 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			running = false
 		}
 	}
-	if commentTicker < 0 {
+	if commentTicker <= 0.0 {
 		comment = ""
+		commentTicker = 0
+	} else {
+		commentTicker -= elapsed
 	}
-	commentTicker -= elapsed
 	// Update code here...
 	c.SetDrawColor(BLACK)
 	c.Clear()
+	depthbuffer.Clear()
 	// keys //////////////////////////////////////////
 	if keys.Key == "a" {
 		angle -= ews
@@ -181,27 +188,30 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		}
 	}
 
-	var nx, ny float64
-	// strafe left / right
-	if keys.Key == "n" {
-		nx = x + math.Sin(angle)*ews
-		ny = y + math.Cos(angle)*ews
-	}
-	if keys.Key == "m" {
-		nx = x - math.Sin(angle)*ews
-		ny = y - math.Cos(angle)*ews
-	}
+	nx := x
+	ny := y
 	// forward backward
 	if keys.Key == "w" {
-		nx = x - math.Sin(angle)*ews
+		nx = x + math.Sin(angle)*ews
 		ny = y + math.Cos(angle)*ews
 	}
 	if keys.Key == "s" {
-		nx = x + math.Sin(angle)*ews
+		nx = x - math.Sin(angle)*ews
 		ny = y - math.Cos(angle)*ews
 	}
+	// strafe left / right
+	if keys.Key == "n" {
+		nx = x - math.Cos(angle)*ews
+		ny = y + math.Sin(angle)*ews
+	}
+	if keys.Key == "m" {
+		nx = x + math.Cos(angle)*ews
+		ny = y - math.Sin(angle)*ews
+	}
+	nx = Clamp(nx, 0, float64(ww))
+	ny = Clamp(ny, 0, float64(wh))
 
-	if world[int(ny)][int(nx)] != 1 {
+	if world[int(math.Floor(ny))][int(math.Floor(nx))] == 0 {
 		x = nx
 		y = ny
 	} else {
@@ -235,8 +245,8 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		hitWall := false
 		for z < horizon {
 			z += 0.01
-			tx = x + math.Cos(a)*z
-			ty = y - math.Sin(a)*z
+			tx = x + math.Sin(a)*z
+			ty = y + math.Cos(a)*z
 			if tx >= ww || tx < 0 || ty >= wh || ty < 0 {
 				z = horizon
 				break
@@ -299,26 +309,30 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			}
 			c.Point(bx, by)
 		}
+		//depthbuffer.SetIfNearer(bx, 0, z)
+		zbuff[int(bx)] = z
 	}
-	eyex := math.Cos(angle)
-	eyey := math.Sin(angle)
 
-	// Draw sprites
+	eyex := math.Sin(angle)
+	eyey := math.Cos(angle)
+	// Draw static objects - sprites
+	// TODO draw sdynamic objects - bullets
 	for _, o := range objects {
+
 		// is object in field of view?
 		oVecx := o.x - x
 		oVecy := o.y - y
 		z := math.Sqrt(oVecx*oVecx + oVecy*oVecy)
 		oAngle := math.Atan2(eyey, eyex) - math.Atan2(oVecy, oVecx)
-		if oAngle < 0 {
+		if oAngle < -PI {
 			oAngle += PI * 2
 		}
-		if oAngle > PI*2 {
+		if oAngle > PI {
 			oAngle -= PI * 2
 		}
-		if math.Abs(oAngle) < FOV2 && z > 0.5 {
+		if math.Abs(oAngle) < FOV2 && z >= 0.5 && z < horizon {
 			// draw sprite
-			oCeil := blocksh/2 - blocksh/z
+			oCeil := screenmid - (blocksh / z)
 			oFloor := blocksh - oCeil
 			oHeight := oFloor - oCeil
 			oAspectRatio := o.sprite.H / o.sprite.W
@@ -329,11 +343,12 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 					sampleX := lx / oWidth
 					sampleY := ly / oHeight
 					clr := o.sprite.SampleSprite(sampleX, sampleY)
-					if clr.A > 0 {
-						oCol := oMidObject + lx - (oWidth / 2)
-						if oCol >= 0 && oCol < blocksw {
+					oCol := oMidObject + lx - (oWidth / 2)
+					if oCol >= 0 && oCol < blocksw {
+						if clr.A > 0 && zbuff[int(oCol)] >= z {
 							c.SetDrawColor(clr)
 							c.Point(oCol, ly+oCeil)
+							zbuff[int(oCol)] = z
 						}
 					}
 				}

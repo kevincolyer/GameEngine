@@ -50,11 +50,11 @@ func onCreate(c *Context) {
 	blocksh = c.ScrnHeight
 	c.Clear()
 	c.Present()
-	coin, err = NewSprite("GameEngine/coin2.png")
+	coin, err = NewSprite("../../assets/coin2.png")
 	if err != nil {
 		panic(err)
 	}
-	dungeon, err = NewSpriteSheet("GameEngine/set-cave_bright.png", 10, 2)
+	dungeon, err = NewSpriteSheet("../../assets/set-cave_bright.png", 10, 2)
 	if err != nil {
 		panic(err)
 	}
