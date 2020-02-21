@@ -411,6 +411,72 @@ func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
 	return running, keys
 }
 
+// DrawCircle ... draws circle using point function
+func (c *Context) DrawCircle(x, y, radius float64) {
+	// from Rosetta Code
+	// Circle plots a circle with center x, y and radius r.
+	// Limiting behavior:
+	// r < 0 plots no pixels.
+	// r = 0 plots a single pixel at x, y.
+	// r = 1 plots four pixels in a diamond shape around the center pixel at x, y.
+	if radius < 0 {
+		return
+	}
+	// Bresenham algorithm
+	x1, y1, err := -radius, 0.0, 2-2*radius
+	for {
+		c.Point(x-x1, y+y1)
+		c.Point(x+y1, y+x1)
+		c.Point(x+x1, y-y1)
+		c.Point(x-y1, y-x1)
+		radius = err
+		if radius > x1 {
+			x1++
+			err += x1*2 + 1
+		}
+		if radius <= y1 {
+			y1++
+			err += y1*2 + 1
+		}
+		if x1 >= 0 {
+			break
+		}
+	}
+}
+
+// DrawFillCircle ... draws filled circle using point function
+func (c *Context) DrawFillCircle(x, y, radius float64) {
+	// from Rosetta Code - adapted to draw fill circle
+	// Circle plots a circle with center x, y and radius r.
+	// Limiting behavior:
+	// r < 0 plots no pixels.
+	// r = 0 plots a single pixel at x, y.
+	// r = 1 plots four pixels in a diamond shape around the center pixel at x, y.
+	if radius < 0 {
+		return
+	}
+	// Bresenham algorithm
+	x1, y1, err := -radius, 0.0, 2-2*radius
+	for {
+		c.Line(x-x1, y+y1, x, y+y1)
+		c.Line(x+y1, y+x1, x, y+x1)
+		c.Line(x+x1, y-y1, x, y-y1)
+		c.Line(x-y1, y-x1, x, y-x1)
+		radius = err
+		if radius > x1 {
+			x1++
+			err += x1*2 + 1
+		}
+		if radius <= y1 {
+			y1++
+			err += y1*2 + 1
+		}
+		if x1 >= 0 {
+			break
+		}
+	}
+}
+
 // Point ... Draws a blocky point transformed to screen with optional transform applied from func stored in Context
 func (c *Context) Point(x0, y0 float64) {
 	if c.screenXYtransform != nil {

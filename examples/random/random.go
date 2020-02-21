@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/veandco/go-sdl2/sdl"
+
 	. "github.com/kevincolyer/GameEngine/GameEngine"
 )
 
@@ -56,6 +58,7 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		fmt.Println("pressed ", keys.Key)
 	}
 	c.Clear()
+
 	lastRandSeed = rand.Seed(lastRandSeed)
 
 	for x := 0.0; x < blocksw; x++ {
@@ -69,13 +72,18 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			c.Point(x, y)
 		}
 	}
+	mx, my, state := sdl.GetMouseState()
+	if state&sdl.ButtonLMask() == 1 {
+		c.SetDrawColor(Colour{255, 0, 0, 255})
+		c.DrawFillCircle(float64(mx)/blocks, float64(my)/blocks, 13.0)
+	}
+	c.SetDrawColor(Colour{255, 255, 0, 255})
+	c.DrawCircle(float64(mx)/blocks, float64(my)/blocks, 15.0)
 	c.Present()
-	Delay(1)
+	Delay(10)
 
 	return running
 }
-
-
 
 // gnuRand object pseudo random number generator - good for 32bits
 type gnuRand struct {
@@ -83,7 +91,7 @@ type gnuRand struct {
 	Size float32
 }
 
-// gnuRand constructor - pseudo random number generator - good for 32bits
+// NewgnuRand constructor - pseudo random number generator - good for 32bits
 func NewgnuRand(s uint32) *gnuRand {
 	return &gnuRand{seed: uint32(s), Size: 0x7FFFFFFF}
 }
