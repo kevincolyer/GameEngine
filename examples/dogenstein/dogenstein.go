@@ -78,10 +78,6 @@ var worldSpeed float64
 var distScreen = 0.5
 var commentTicker = 0.0
 
-// to help undistort the fishbowl effect
-var rayAngles []float64
-var blocksPerUnit = 10.0 // tunable parameter for changing the rayAngles
-
 func onCreate(c *Context) {
 	worldSpeed = 0.1
 	wall, err = NewSprite("../../assets/wall.png")
@@ -96,12 +92,6 @@ func onCreate(c *Context) {
 	if err != nil {
 		panic("couldn't load sprite")
 	}
-	rayAngles = make([]float64, int(blocksw))
-	// for i := range rayAngles {
-	// 	yEye := distScreen
-	// 	xEye := (float64(i) - (blocksw / 2.0)) / blocksPerUnit
-	// 	rayAngles[i] = math.Atan2(yEye, xEye)
-	// }
 
 	objects = []spriteObject{
 		spriteObject{sprite: lamp, x: 3, y: 4},
@@ -147,7 +137,6 @@ func resetGame() {
 
 func onUpdate(c *Context, elapsed float64) (running bool) {
 	// boilerplate to start
-	// println(elapsed)
 	ews := elapsed * worldSpeed
 	running, keys := c.PollQuitandKeys()
 	if keys.Event {
@@ -161,10 +150,12 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	} else {
 		commentTicker -= elapsed
 	}
-	// Update code here...
+
+	// Screen prep and update code here...
 	c.SetDrawColor(BLACK)
 	c.Clear()
 	depthbuffer.Clear()
+
 	// keys //////////////////////////////////////////
 	if keys.Key == "a" {
 		angle -= ews
@@ -176,15 +167,6 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		angle += ews
 		if angle >= PI*2 {
 			angle -= PI * 2
-		}
-	}
-	if keys.Key == "=" {
-		blocksPerUnit += ews
-	}
-	if keys.Key == "-" {
-		blocksPerUnit -= ews
-		if blocksPerUnit < 0 {
-			blocksPerUnit = 0.1
 		}
 	}
 
@@ -222,27 +204,18 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	if keys.Key == " " {
 	}
 
-	// manipulations /////////////////////////////////////
+	// world manipulations /////////////////////////////////////
 
-	// Draw
-	///////////////////////////////////////////////////
+	// screen draw /////////////////////////////////////////////
 	screenmid := blocksh / 2
-	// for i := range rayAngles {
-	// 	yEye := distScreen
-	// 	xEye := (float64(i) - (blocksw / 2.0)) / blocksPerUnit
-	// 	rayAngles[i] = math.Atan2(yEye, xEye)
-	// }
-	// screenmidw := blocksw / 2
+
 	for bx := 0.0; bx < blocksw; bx++ {
 		a := angle + bx/blocksw*FOV - FOV2
-		// a := angle + rayAngles[int(bx)]
-		// println(int(bx), angle, rayAngles[int(bx)])
 		// march a ray from screen distance to horizon
 		// z is distance to hitting a block. give up at horizon
-		// z = math.Sqrt(screenz*screenz + (bx-screenmidw)*(bx-screenmidw))
 		z = screenz
 		var tx, ty float64
-		hitWall := false
+		//hitWall := false
 		for z < horizon {
 			z += 0.01
 			tx = x + math.Sin(a)*z
@@ -253,13 +226,9 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			}
 			if world[int(ty)][int(tx)] == 1 {
 				// hit a wall
-				hitWall = true
+				//hitWall = true
 				break
 			}
-		}
-		// if hit wall check if hit corner...
-		if hitWall {
-
 		}
 
 		// draw from top to bottom
@@ -267,10 +236,13 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 		wallb := math.Trunc(blocksh - wallt)
 		c.SetDrawColor(BLACK) // ceiling to walltop
 		for by := 0.0; by < blocksh; by++ {
-			// wall top to bottom
+			// from top to wall top
+			// nothing - keep black
+
+			// wall top to bottom (textured)
 			if by >= wallt && by < wallb {
-				//c.SetDrawColor(WHITE.Fade(1.5 / z))
-				// texture draw
+
+				// Texture Draw
 				// find normalised x and y to sample texture with
 				ny := (by - wallt) / (wallb - wallt)
 				var nx float64
@@ -303,18 +275,20 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 				}
 				c.SetDrawColor(wall.SampleSprite(nx, ny))
 			}
-			// wall bottom
+			// from wall to bottom
 			if by >= wallb {
 				c.SetDrawColor(RED.Fade(1 - (blocksh-by)/screenmid))
 			}
 			c.Point(bx, by)
 		}
-		//depthbuffer.SetIfNearer(bx, 0, z)
+		// Set depth buffer to aid sprite manipulations later
 		zbuff[int(bx)] = z
 	}
 
+	// unit vector of player looking angle
 	eyex := math.Sin(angle)
 	eyey := math.Cos(angle)
+
 	// Draw static objects - sprites
 	// TODO draw sdynamic objects - bullets
 	for _, o := range objects {
@@ -355,13 +329,15 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 			}
 		}
 	}
-	// Draw text and 'top' layers
+
+	// Draw text and 'top' layers //////////////////////////////
 	c.SetDrawColor(STEELBLUE)
 	if *fps {
 		c.DrawText(1, 17, 4, fmt.Sprintf("fps:%d", int(100/elapsed)))
 	}
-	c.DrawText(0, 0, 4, fmt.Sprintf("x: %.2f y: %.2f a: %.2f blocksPerUnit %.2f    %v", x, y, angle, blocksPerUnit, comment))
-	// boilerplate to finish
+	c.DrawText(0, 0, 4, fmt.Sprintf("x: %.2f y: %.2f a: %.2f    %v", x, y, angle, comment))
+
+	// boilerplate to finish ///////////////////////////////////
 	c.Present()
 	Delay(1)
 	return running
