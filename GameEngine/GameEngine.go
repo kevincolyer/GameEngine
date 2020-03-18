@@ -16,10 +16,10 @@ import (
 	//"github.com/veandco/go-sdl2/ttf"
 )
 
-// TransformFunc ... type of function to modify Point drawing
+// TransformFunc - type of function to modify Point drawing
 type TransformFunc func(x, y float64) (float64, float64)
 
-// Context ... contains context object for game engine
+// Context - contains context object for game engine
 type Context struct {
 	WindowTitle       string
 	WinWidth          float64
@@ -33,7 +33,7 @@ type Context struct {
 	screenXYtransform TransformFunc
 }
 
-// New ... create the GameEngine and initialises
+// New - create the GameEngine and initialises
 func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 	fmt.Println("starting Game engine")
 	ctx := Context{
@@ -63,7 +63,7 @@ func New(b, sw, sh float64, title string, tf TransformFunc) *Context {
 	return &ctx
 }
 
-// Destroy ... cleans up window and renderer
+// Destroy - cleans up window and renderer
 func (c *Context) Destroy() {
 	c.Window.Destroy()
 	c.Renderer.Destroy()
@@ -71,7 +71,7 @@ func (c *Context) Destroy() {
 	ttf.Quit()
 }
 
-// NewRect ... helper function to build and SDL rectangle from float64's
+// NewRect - helper function to build and SDL rectangle from float64's
 func NewRect(x, y, w, h float64) *sdl.Rect {
 	return &sdl.Rect{int32(x), int32(y), int32(w), int32(h)}
 }
@@ -81,12 +81,12 @@ func Delay(s uint32) {
 	sdl.Delay(s)
 }
 
-// RandIntN ... rand intn for sdl
+// RandIntN - rand intn for sdl
 func RandIntN(i float64) float64 {
 	return float64(rand.Intn(int(i)))
 }
 
-// NewSdlColor ... takes floats and returs an sdl suitalbe color object
+// NewSdlColor - takes floats and returs an sdl suitalbe color object
 func NewSdlColor(r, g, b, a float64) sdl.Color {
 	return sdl.Color{uint8(r), uint8(g), uint8(b), uint8(a)}
 }
@@ -113,37 +113,37 @@ func (c Colour) Fade(normalised float64) Colour {
 	return Colour{R: c.R * normalised, G: c.G * normalised, B: c.B * normalised, A: c.A}
 }
 
-// ToSDLColor ... returns a sdl.Color struct from a Colour struct
+// ToSDLColor - returns a sdl.Color struct from a Colour struct
 func (c Colour) ToSDLColor() sdl.Color {
 	return NewSdlColor(c.R, c.G, c.B, c.A)
 }
 
-// Unpack ... transforms Colour struct to 4 uint8 values
+// Unpack - transforms Colour struct to 4 uint8 values
 func (c Colour) Unpack() (uint8, uint8, uint8, uint8) {
 	return uint8(c.R), uint8(c.G), uint8(c.B), uint8(c.A)
 }
 
-// V2D ... struct for holding a 2D vector
+// V2D - struct for holding a 2D vector
 type V2D struct {
 	Dx float64
 	Dy float64
 }
 
-// V3D ... struct for holding a 2D vector
+// V3D - struct for holding a 2D vector
 type V3D struct {
 	DX float64
 	DY float64
 	DZ float64
 }
 
-// P2D ... Struct for holding a 2D point
+// P2D - Struct for holding a 2D point
 type P2D struct {
 	X float64
 	Y float64
 	// for depth buffering?
 }
 
-// P3D ... Struct for holding a 3D point
+// P3D - Struct for holding a 3D point
 type P3D struct {
 	X float64
 	Y float64
@@ -157,7 +157,7 @@ type ZBuffer struct {
 	h   int
 }
 
-// NEGINF ... helper const = -1_000_000
+// NEGINF - helper const = -1_000_000
 const NEGINF float64 = -1000000
 
 // NewZBuffer returns a pointer to a initilised and cleared z buffer
@@ -171,14 +171,14 @@ func NewZBuffer(w, h float64) *ZBuffer {
 	return z
 }
 
-// Clear ... ZBuffer
+// Clear - ZBuffer
 func (z *ZBuffer) Clear() {
 	for x := range z.buf {
 		z.buf[x] = NEGINF
 	}
 }
 
-// SetIfNearer ... sets z buffer to depth d if is nearer than prev val. Returns true or false
+// SetIfNearer - sets z buffer to depth d if is nearer than prev val. Returns true or false
 func (z *ZBuffer) SetIfNearer(x, y, d float64) bool {
 	// nearer is > then NEGINF
 	if z.buf[int(x)+int(y)*z.w] < d {
@@ -207,7 +207,7 @@ func (c *Context) DrawText(x, y, scale float64, text string) {
 	}
 }
 
-// Wrap ... returns number wraped around a low and hi boundary
+// Wrap - returns number wraped around a low and hi boundary
 func Wrap(num, low, hi float64) float64 {
 	if num < low {
 		return hi - (low - num)
@@ -218,7 +218,7 @@ func Wrap(num, low, hi float64) float64 {
 	return num
 }
 
-// Clamp ... returns number clamped between low and hi
+// Clamp - returns number clamped between low and hi
 func Clamp(num, low, hi float64) float64 {
 	if num < low {
 		return low
@@ -367,7 +367,7 @@ func (c *Context) Clear() {
 	c.Renderer.Clear()
 }
 
-// Present ... Renders all to screen
+// Present - Renders all to screen
 func (c *Context) Present() {
 	c.Renderer.Present()
 }
@@ -378,7 +378,7 @@ func (c *Context) SetDrawColor(rgba Colour) {
 	c.Renderer.SetDrawColor(rgba.Unpack())
 }
 
-// KeyStatus  ... Struct holding key status information
+// KeyStatus  - Struct holding key status information
 type KeyStatus struct {
 	Key       string // key pressed as string
 	Pressed   bool
@@ -388,7 +388,7 @@ type KeyStatus struct {
 	Event     bool
 }
 
-// PollQuitandKeys ... checks for events. Returns running=True and a Key struct
+// PollQuitandKeys - checks for events. Returns running=True and a Key struct
 func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
 	running = true
 	keys.Event = false // unless something happens!
@@ -409,7 +409,7 @@ func (c *Context) PollQuitandKeys() (running bool, keys KeyStatus) {
 	return running, keys
 }
 
-// DrawCircle ... draws circle using point function
+// DrawCircle - draws circle using point function
 func (c *Context) DrawCircle(x, y, radius float64) {
 	// from Rosetta Code
 	// Circle plots a circle with center x, y and radius r.
@@ -442,7 +442,7 @@ func (c *Context) DrawCircle(x, y, radius float64) {
 	}
 }
 
-// DrawFillCircle ... draws filled circle using point function
+// DrawFillCircle - draws filled circle using point function
 func (c *Context) DrawFillCircle(x, y, radius float64) {
 	// from Rosetta Code - adapted to draw fill circle
 	// Circle plots a circle with center x, y and radius r.
@@ -475,7 +475,7 @@ func (c *Context) DrawFillCircle(x, y, radius float64) {
 	}
 }
 
-// Point ... Draws a blocky point transformed to screen with optional transform applied from func stored in Context
+// Point - Draws a blocky point transformed to screen with optional transform applied from func stored in Context
 func (c *Context) Point(x0, y0 float64) {
 	if c.screenXYtransform != nil {
 		x0, y0 = c.screenXYtransform(x0, y0)
@@ -483,12 +483,12 @@ func (c *Context) Point(x0, y0 float64) {
 	c.Renderer.FillRect(NewRect(x0*c.Blocks, y0*c.Blocks, c.Blocks, c.Blocks))
 }
 
-// PointScale ... Draws a blocky point but scaled down by a factore (used mainly in text drawing) (blocks)
+// PointScale - Draws a blocky point but scaled down by a factore (used mainly in text drawing) (blocks)
 func (c *Context) PointScale(x0, y0, scale float64) {
 	c.Renderer.FillRect(NewRect(x0*c.Blocks/scale, y0*c.Blocks/scale, c.Blocks/scale, c.Blocks/scale))
 }
 
-// Elapsed ... calculates the elapsed time between updates
+// Elapsed - calculates the elapsed time between updates
 func (c *Context) Elapsed() float64 {
 	t := time.Now()
 	elapsed := float64(t.Sub(c.lastTick))
@@ -499,7 +499,7 @@ func (c *Context) Elapsed() float64 {
 	return elapsed / (1000 * 1000 * 10)
 }
 
-// Sign ... helper func - returns sign of input as -1,0,1
+// Sign - helper func - returns sign of input as -1,0,1
 func Sign(s float64) float64 {
 	if s == 0 {
 		return 0
@@ -517,7 +517,7 @@ type Sprite struct {
 	H float64
 }
 
-// NewSprite ... loads and builds a new sprite given a filename. Returns pointer to sprite structure
+// NewSprite - loads and builds a new sprite given a filename. Returns pointer to sprite structure
 func NewSprite(filename string) (s *Sprite, err error) {
 	infile, err := os.Open(filename)
 	if err != nil {
@@ -536,7 +536,7 @@ func NewSprite(filename string) (s *Sprite, err error) {
 	return
 }
 
-// DrawSprite ... at x,y location
+// DrawSprite - at x,y location
 func (s *Sprite) DrawSprite(c *Context, x, y float64) {
 	for i := 0.0; i < s.W; i++ {
 		for j := 0.0; j < s.H; j++ {
@@ -550,7 +550,7 @@ func (s *Sprite) DrawSprite(c *Context, x, y float64) {
 	}
 }
 
-// DrawPartialSprite ... draws a rectangle from a sprite at x,y given offset ox and oy into sprite size w, h. No bounds checking
+// DrawPartialSprite - draws a rectangle from a sprite at x,y given offset ox and oy into sprite size w, h. No bounds checking
 func (s *Sprite) DrawPartialSprite(c *Context, x, y, ox, oy, w, h float64) {
 	for i := ox; i < ox+w; i++ {
 		for j := oy; j < oy+h; j++ {
@@ -564,7 +564,7 @@ func (s *Sprite) DrawPartialSprite(c *Context, x, y, ox, oy, w, h float64) {
 	}
 }
 
-// SampleSprite ... Samples from normal x, y of sprite
+// SampleSprite - Samples from normal x, y of sprite
 func (s *Sprite) SampleSprite(nx, ny float64) (rgba Colour) {
 	bounds := s.Bounds()
 	x := int(math.Trunc(nx * float64(bounds.Max.X-bounds.Min.X)))
@@ -574,7 +574,7 @@ func (s *Sprite) SampleSprite(nx, ny float64) (rgba Colour) {
 	return
 }
 
-// SpriteSheet ...
+// SpriteSheet -
 type SpriteSheet struct {
 	Sheet         *Sprite
 	SpritesPerRow float64
@@ -583,7 +583,7 @@ type SpriteSheet struct {
 	SpriteH       float64
 }
 
-// NewSpriteSheet ...
+// NewSpriteSheet -
 func NewSpriteSheet(filename string, NumPerCol, NumPerRow float64) (sh *SpriteSheet, err error) {
 	sh = &SpriteSheet{SpritesPerRow: NumPerRow, SpritesPerCol: NumPerCol}
 	sh.Sheet, err = NewSprite(filename)
@@ -595,7 +595,7 @@ func NewSpriteSheet(filename string, NumPerCol, NumPerRow float64) (sh *SpriteSh
 	return
 }
 
-// DrawSpriteFromSheet ... given x and y coord draws the sprite from row x col of spritesheet
+// DrawSpriteFromSheet - given x and y coord draws the sprite from row x col of spritesheet
 func (s *SpriteSheet) DrawSpriteFromSheet(c *Context, x, y, row, col float64) {
 	col = math.Mod(col, s.SpritesPerCol)
 	row = math.Mod(row, s.SpritesPerRow)
@@ -604,7 +604,7 @@ func (s *SpriteSheet) DrawSpriteFromSheet(c *Context, x, y, row, col float64) {
 	s.Sheet.DrawPartialSprite(c, x, y, ox, oy, s.SpriteW, s.SpriteH)
 }
 
-// DrawSpriteFromSheetI ... indexes spritesheet as linear array.
+// DrawSpriteFromSheetI - indexes spritesheet as linear array.
 func (s *SpriteSheet) DrawSpriteFromSheetI(c *Context, x, y, i float64) {
 	i = math.Trunc(math.Mod(i, s.SpritesPerCol*s.SpritesPerRow))
 	col := math.Mod(i, s.SpritesPerCol)
