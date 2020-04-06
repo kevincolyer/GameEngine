@@ -17,7 +17,7 @@ func wrapScreen(x, y float64) (float64, float64) {
 }
 
 var blocksw, blocksh, blocks float64
-var WHITE, BLACK, RED, GREEN, BLUE, GREY50, DARKRED, SADDLEBROWN, STEELBLUE Colour
+var WHITE, BLACK, RED, GREEN, BLUE, GREY50, DARKRED, SADDLEBROWN, BROWN, STEELBLUE Colour
 var explodeShip bool
 
 var fps = flag.Bool("fps", false, "Display Frames per second")
@@ -40,6 +40,7 @@ func main() {
 	BLUE = NewColour(0, 0, 255, 255)
 	GREY50 = NewColour(127, 127, 127, 255)
 	SADDLEBROWN = NewColour(139, 69, 19, 255)
+	BROWN = NewColour(101, 60, 15, 255)
 	STEELBLUE = NewColour(70, 130, 180, 255)
 	var ctx = New(blocks, blocksw, blocksh, "SSSSNake!", wrapScreen)
 
@@ -149,8 +150,12 @@ func onUpdate(c *Context, elapsed float64) (running bool) {
 	///////////////////////////////////////////////////
 	// draw bottom layers
 
-	c.SetDrawColor(SADDLEBROWN)
 	for i := player.length - 1; i >= 1.0; i-- {
+		if math.Mod(i, 2) == 0 {
+			c.SetDrawColor(SADDLEBROWN)
+		} else {
+			c.SetDrawColor(BROWN)
+		}
 		c.DrawFillCircle(player.segments[int(i)].x, player.segments[int(i)].y, player.size)
 	}
 	c.SetDrawColor(WHITE)
